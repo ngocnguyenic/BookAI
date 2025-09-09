@@ -1,0 +1,6 @@
+com\mycompany\bookai\JakartaRestConfiguration.class
+com\mycompany\bookai\resources\JakartaEE10Resource.class
+connect\DBConnection.class
+dao\BookDAO.class
+model\Book.class
+controller\Book\BookCrud.class
