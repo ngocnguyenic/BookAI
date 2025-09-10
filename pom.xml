@@ -21,39 +21,50 @@
 
     <dependencies>
         <!-- Jakarta EE API (Servlet, JSP, JPA, JAX-RS, …) -->
-        <dependency>
-            <groupId>jakarta.platform</groupId>
-            <artifactId>jakarta.jakartaee-api</artifactId>
-            <version>${jakartaee.version}</version>
-            <scope>provided</scope>
-        </dependency>
+       
+    <!-- Jakarta EE API (Servlet, JSP, JPA, JAX-RS, …) -->
+    <dependency>
+        <groupId>jakarta.platform</groupId>
+        <artifactId>jakarta.jakartaee-api</artifactId>
+        <version>${jakartaee.version}</version>
+        <scope>provided</scope>
+    </dependency>
 
-        <!-- JSTL -->
-        <dependency>
-            <groupId>jakarta.servlet.jsp.jstl</groupId>
-            <artifactId>jakarta.servlet.jsp.jstl-api</artifactId>
-            <version>3.0.0</version>
-        </dependency>
-        <dependency>
-            <groupId>org.glassfish.web</groupId>
-            <artifactId>jakarta.servlet.jsp.jstl</artifactId>
-            <version>3.0.1</version>
-        </dependency>
+    <!-- JSTL -->
+    <dependency>
+        <groupId>jakarta.servlet.jsp.jstl</groupId>
+        <artifactId>jakarta.servlet.jsp.jstl-api</artifactId>
+        <version>3.0.0</version>
+    </dependency>
+    <dependency>
+        <groupId>org.glassfish.web</groupId>
+        <artifactId>jakarta.servlet.jsp.jstl</artifactId>
+        <version>3.0.1</version>
+    </dependency>
 
-        <!-- SQL Server JDBC driver (ổn định, có trên Maven Central) -->
-        <dependency>
-            <groupId>com.microsoft.sqlserver</groupId>
-            <artifactId>mssql-jdbc</artifactId>
-            <version>12.4.2.jre11</version>
-        </dependency>
+    <!-- SQL Server JDBC driver -->
+    <dependency>
+        <groupId>com.microsoft.sqlserver</groupId>
+        <artifactId>mssql-jdbc</artifactId>
+        <version>12.4.2.jre11</version>
+    </dependency>
 
-        <!-- JSON (Gson) -->
-        <dependency>
-            <groupId>com.google.code.gson</groupId>
-            <artifactId>gson</artifactId>
-            <version>2.11.0</version>
-        </dependency>
-    </dependencies>
+    <!-- JSON (Gson) -->
+    <dependency>
+        <groupId>com.google.code.gson</groupId>
+        <artifactId>gson</artifactId>
+        <version>2.11.0</version>
+    </dependency>
+
+    <!-- JSON (org.json) -->
+    <dependency>
+        <groupId>org.json</groupId>
+        <artifactId>json</artifactId>
+        <version>20240303</version>
+    </dependency>
+</dependencies>
+
+    
 
     <build>
         <plugins>

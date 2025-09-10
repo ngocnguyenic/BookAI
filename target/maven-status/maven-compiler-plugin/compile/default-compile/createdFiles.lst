@@ -4,3 +4,6 @@ connect\DBConnection.class
 dao\BookDAO.class
 model\Book.class
 controller\Book\BookCrud.class
+controller\AI\AIServlet.class
+config\ConfigAPIKey.class
+service\GeminiService.class

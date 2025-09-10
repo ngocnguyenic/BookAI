@@ -4,9 +4,17 @@
         <servlet-name>BookCrud</servlet-name>
         <servlet-class>controller.Book.BookCrud</servlet-class>
     </servlet>
+    <servlet>
+        <servlet-name>AIServlet</servlet-name>
+        <servlet-class>controller.AI.AIServlet</servlet-class>
+    </servlet>
     <servlet-mapping>
         <servlet-name>BookCrud</servlet-name>
         <url-pattern>/bookcrud</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>AIServlet</servlet-name>
+        <url-pattern>/aiservlet</url-pattern>
     </servlet-mapping>
     <session-config>
         <session-timeout>
