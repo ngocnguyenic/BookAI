@@ -27,7 +27,7 @@ public class BookCrud extends HttpServlet {
         try {
             String action = request.getParameter("action");
             if (action == null || action.isEmpty()) {
-                action = "list"; // fallback mặc định
+                action = "list"; 
             }
 
             switch (action) {
@@ -60,7 +60,7 @@ public class BookCrud extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        service(request, response); // gom POST & GET về chung
+        service(request, response); 
     }
 
     private void listBooks(HttpServletRequest request, HttpServletResponse response)
