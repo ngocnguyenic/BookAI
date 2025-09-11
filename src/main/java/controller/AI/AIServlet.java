@@ -4,6 +4,7 @@ import service.GeminiService;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.JsonSyntaxException;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
@@ -46,7 +47,7 @@ public class AIServlet extends HttpServlet {
                 rawResult = "{\"error\":\"Unknown action. Use 'summary' or 'qa'\"}";
             }
 
-            // Lọc text chính từ JSON Gemini trả về bằng Gson
+            
             String cleanText = rawResult;
             try {
                 JsonObject json = JsonParser.parseString(rawResult).getAsJsonObject();
@@ -58,15 +59,14 @@ public class AIServlet extends HttpServlet {
                         cleanText = parts.get(0).getAsJsonObject().get("text").getAsString();
                     }
                 }
-            } catch (Exception parseEx) {
-                // Nếu không parse được JSON thì trả về raw
+            } catch (JsonSyntaxException parseEx) {
+                
                 cleanText = rawResult;
             }
 
             response.getWriter().write(cleanText);
 
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (IOException e) {
             response.getWriter().write("{\"error\":\"" + e.getMessage() + "\"}");
         }
     }

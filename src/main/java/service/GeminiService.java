@@ -44,12 +44,9 @@ public class GeminiService {
             }
         }
 
-        return response.toString(); // bạn parse JSON lấy text
+        return response.toString(); 
     }
 
-    /**
-     * Generate Q&A pairs for a chapter
-     */
     public String generateQAPairs(String chapterTitle, String chapterContent) throws IOException {
         String urlStr = apiUrl + "?key=" + apiKey;
         URL url = new URL(urlStr);
@@ -84,14 +81,6 @@ public class GeminiService {
         return response.toString();
     }
 
-    /**
-     * Generate audio from text (stub – cần API TTS riêng như Google TTS / Azure TTS)
-     */
-    public byte[] generateAudio(String text) throws IOException {
-        // ⚠ Gemini không hỗ trợ TTS trực tiếp
-        // Bạn có thể gọi Google Cloud Text-to-Speech API hoặc một service khác ở đây.
-        throw new UnsupportedOperationException("Gemini does not support TTS. Use Google TTS API instead.");
-    }
 
     private String escapeJson(String s) {
         if (s == null) return "";

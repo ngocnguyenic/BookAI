@@ -1,9 +1,12 @@
 com\mycompany\bookai\JakartaRestConfiguration.class
-com\mycompany\bookai\resources\JakartaEE10Resource.class
+dao\QADao$QAItem.class
+dao\ChapterDAO.class
+dao\QADao.class
 connect\DBConnection.class
 dao\BookDAO.class
+config\ConfigAPIKey.class
+service\GeminiService.class
+com\mycompany\bookai\resources\JakartaEE10Resource.class
 model\Book.class
 controller\Book\BookCrud.class
 controller\AI\AIServlet.class
-config\ConfigAPIKey.class
-service\GeminiService.class
