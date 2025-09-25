@@ -8,6 +8,10 @@
         <servlet-name>AIServlet</servlet-name>
         <servlet-class>controller.AI.AIServlet</servlet-class>
     </servlet>
+    <servlet>
+        <servlet-name>BookDetailServlet</servlet-name>
+        <servlet-class>controller.Book.BookDetailServlet</servlet-class>
+    </servlet>
     <servlet-mapping>
         <servlet-name>BookCrud</servlet-name>
         <url-pattern>/bookcrud</url-pattern>
@@ -15,6 +19,10 @@
     <servlet-mapping>
         <servlet-name>AIServlet</servlet-name>
         <url-pattern>/aiservlet</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>BookDetailServlet</servlet-name>
+        <url-pattern>/bookdetail</url-pattern>
     </servlet-mapping>
     <session-config>
         <session-timeout>
