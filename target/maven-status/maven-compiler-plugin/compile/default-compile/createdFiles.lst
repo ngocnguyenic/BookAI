@@ -4,9 +4,15 @@ dao\ChapterDAO.class
 dao\QADao.class
 connect\DBConnection.class
 dao\BookDAO.class
+service\ChapterDetector.class
+service\PDFImageExtractor.class
 config\ConfigAPIKey.class
 service\GeminiService.class
 com\mycompany\bookai\resources\JakartaEE10Resource.class
 model\Book.class
+model\Chapter.class
+service\ChapterAIDetector.class
 controller\Book\BookCrud.class
 controller\AI\AIServlet.class
+service\PDFExtractor.class
+controller\Book\BookDetailServlet.class

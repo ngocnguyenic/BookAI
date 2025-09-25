@@ -1,3 +1,4 @@
+// model/Book.java
 package model;
 
 public class Book {
@@ -6,16 +7,11 @@ public class Book {
     private String author;
     private String major;      
     private String description;
+    private String filePath;  
 
-    public Book() {}
+ 
+    public Book(int id, String title1, String author1, String major1, String description1) {}
 
-    public Book(int bookID, String title, String author, String major, String description) {
-        this.bookID = bookID;
-        this.title = title;
-        this.author = author;
-        this.major = major;
-        this.description = description;
-    }
 
     public Book(String title, String author, String major, String description) {
         this.title = title;
@@ -23,6 +19,26 @@ public class Book {
         this.major = major;
         this.description = description;
     }
+
+
+    public Book(int bookID, String title, String author, String description, String major, String filePath) {
+        this.bookID = bookID;
+        this.title = title;
+        this.author = author;
+        this.description = description; 
+        this.major = major;             
+        this.filePath = filePath;
+    }
+
+
+    public String getFilePath() {
+        return filePath;
+    }
+
+    public void setFilePath(String filePath) {
+        this.filePath = filePath;
+    }
+
 
     public int getBookID() {
         return bookID;
@@ -64,7 +80,6 @@ public class Book {
         this.description = description;
     }
 
-    
     @Override
     public String toString() {
         return "Book{" +
@@ -73,6 +88,7 @@ public class Book {
                 ", author='" + author + '\'' +
                 ", major='" + major + '\'' +
                 ", description='" + description + '\'' +
+                ", filePath='" + filePath + '\'' +
                 '}';
     }
 }

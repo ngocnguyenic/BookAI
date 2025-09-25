@@ -9,9 +9,9 @@
 %>
 <html>
 <head>
-    <title>Book Management</title>
+    <title>📚 Quản lý sách</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-   <script src="https://code.responsivevoice.org/responsivevoice.js?key=eW5KOf7Q"></script>
+    <script src="https://code.responsivevoice.org/responsivevoice.js?key=eW5KOf7Q"></script>
     <style>
         .tts-controls { margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 5px; border: 1px solid #dee2e6; }
         .tts-btn { margin: 2px; padding: 5px 10px; font-size: 12px; }
@@ -19,31 +19,42 @@
         .voice-settings label { font-size: 12px; margin: 0; }
         .voice-settings select, .voice-settings input { font-size: 12px; padding: 3px 6px; }
         #aiResult { max-height: 200px; overflow-y: auto; }
+        .action-btn { white-space: nowrap; }
     </style>
 </head>
 <body class="container mt-4">
 
-<h2 class="mb-3">Book Management</h2>
+<h2 class="mb-3">📚 Quản lý sách</h2>
+
+<!-- NÚT UPLOAD PDF -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <a href="book-upload.jsp" class="btn btn-info">
+        📤 Upload sách PDF
+    </a>
+</div>
+
+<!-- FORM THÊM SÁCH THỦ CÔNG -->
 <form action="bookcrud" method="post" class="mb-4">
     <input type="hidden" name="action" value="insert"/>
     <div class="row g-2">
-        <div class="col-md-3"><input type="text" name="title" class="form-control" placeholder="Title" required></div>
-        <div class="col-md-2"><input type="text" name="author" class="form-control" placeholder="Author" required></div>
-        <div class="col-md-2"><input type="text" name="major" class="form-control" placeholder="Major" required></div>
-        <div class="col-md-3"><input type="text" name="description" class="form-control" placeholder="Description"></div>
-        <div class="col-md-2"><button type="submit" class="btn btn-primary w-100">Add Book</button></div>
+        <div class="col-md-3"><input type="text" name="title" class="form-control" placeholder="Tiêu đề" required></div>
+        <div class="col-md-2"><input type="text" name="author" class="form-control" placeholder="Tác giả" required></div>
+        <div class="col-md-2"><input type="text" name="major" class="form-control" placeholder="Chuyên ngành"></div>
+        <div class="col-md-3"><input type="text" name="description" class="form-control" placeholder="Mô tả"></div>
+        <div class="col-md-2"><button type="submit" class="btn btn-primary w-100">➕ Thêm sách</button></div>
     </div>
 </form>
 
+<!-- BẢNG DANH SÁCH SÁCH -->
 <table class="table table-bordered table-hover align-middle">
     <thead class="table-dark">
         <tr class="text-center">
             <th>ID</th>
-            <th>Title</th>
-            <th>Author</th>
-            <th>Major</th>
-            <th>Description</th>
-            <th>Actions</th>
+            <th>Tiêu đề</th>
+            <th>Tác giả</th>
+            <th>Chuyên ngành</th>
+            <th>Mô tả</th>
+            <th>Hành động</th>
         </tr>
     </thead>
     <tbody>
@@ -56,28 +67,46 @@
             <td><%= b.getTitle() %></td>
             <td><%= b.getAuthor() %></td>
             <td><%= b.getMajor() %></td>
-            <td><%= b.getDescription() %></td>
+            <td><%= b.getDescription() != null ? b.getDescription() : "" %></td>
             <td class="text-center">
-                <a href="bookcrud?action=edit&id=<%= b.getBookID() %>" class="btn btn-warning btn-sm">Edit</a>
-                <a href="bookcrud?action=delete&id=<%= b.getBookID() %>" class="btn btn-danger btn-sm">Delete</a>
+                <!-- NÚT MỞ FILE PDF (nếu có) -->
+                <%
+                    if (b.getFilePath() != null && !b.getFilePath().trim().isEmpty()) {
+                %>
+                    <a href="<%= request.getContextPath() %><%= b.getFilePath() %>" target="_blank" class="btn btn-secondary btn-sm action-btn">
+                        📄 Mở PDF
+                    </a>
+                <%
+                    }
+                %>
+                <!-- NÚT XEM CHƯƠNG -->
+                <a href="bookdetail?id=<%= b.getBookID() %>" class="btn btn-info btn-sm action-btn">
+                    📖 Chương
+                </a>
+                <!-- NÚT EDIT/DELETE -->
+                <a href="bookcrud?action=edit&id=<%= b.getBookID() %>" class="btn btn-warning btn-sm action-btn">Sửa</a>
+                <a href="bookcrud?action=delete&id=<%= b.getBookID() %>" class="btn btn-danger btn-sm action-btn"
+                   onclick="return confirm('Xóa sách này?')">Xóa</a>
             </td>
         </tr>
     <%
             }
         } else {
     %>
-        <tr><td colspan="6" class="text-center">No books found.</td></tr>
+        <tr><td colspan="6" class="text-center">Chưa có sách nào.</td></tr>
     <%
         }
     %>
     </tbody>
 </table>
 
+<!-- NÚT AI CHAT (giữ nguyên) -->
 <button class="btn btn-success position-fixed shadow" style="bottom: 20px; right: 20px;" 
         data-bs-toggle="modal" data-bs-target="#aiChatModal">
-    AI Chat
+    🤖 AI Chat
 </button>
 
+<!-- MODAL AI CHAT (giữ nguyên) -->
 <div class="modal fade" id="aiChatModal" tabindex="-1">
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content">
@@ -142,6 +171,7 @@
   </div>
 </div>
 
+<!-- SCRIPTS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 let currentText = '';
@@ -197,6 +227,14 @@ function stopSpeaking() {
 
 document.getElementById('aiChatModal').addEventListener('hidden.bs.modal', function () {
     stopSpeaking();
+});
+
+// Hiển thị giá trị speed/pitch
+document.getElementById('speedRange').addEventListener('input', function() {
+    document.getElementById('speedValue').textContent = this.value + 'x';
+});
+document.getElementById('pitchRange').addEventListener('input', function() {
+    document.getElementById('pitchValue').textContent = this.value;
 });
 </script>
 </body>
