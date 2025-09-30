@@ -60,8 +60,6 @@ public class BookCrud extends HttpServlet {
         }
     }
 
-    
-
     private void listBooks(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException, SQLException {
         
@@ -158,6 +156,11 @@ public class BookCrud extends HttpServlet {
 
         try {
             int id = Integer.parseInt(idParam);
+            
+            // Xóa chapters trước (nếu có foreign key constraint)
+            chapterDAO.deleteChaptersByBookId(id);
+            
+            // Sau đó xóa book
             boolean success = bookDAO.deleteBook(id);
 
             if (success) {
@@ -170,7 +173,7 @@ public class BookCrud extends HttpServlet {
         }
     }
 
-    // ========================= UPLOAD PDF =========================
+    // ========================= UPLOAD PDF VỚI RAG =========================
 
     private void uploadBookWithPDF(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
@@ -181,6 +184,7 @@ public class BookCrud extends HttpServlet {
         String major = request.getParameter("major");
         String description = request.getParameter("description");
 
+        // Validation
         if (filePart == null || filePart.getSize() == 0) {
             request.setAttribute("error", "Vui lòng chọn file PDF.");
             request.getRequestDispatcher("book-upload.jsp").forward(request, response);
@@ -193,7 +197,7 @@ public class BookCrud extends HttpServlet {
             return;
         }
 
-        // save file to uploads/
+        // Save file to uploads/
         String uploadPath = getServletContext().getRealPath("/uploads");
         File uploadDir = new File(uploadPath);
         if (!uploadDir.exists()) uploadDir.mkdirs();
@@ -203,39 +207,82 @@ public class BookCrud extends HttpServlet {
         String filePath = uploadPath + File.separator + safeFileName;
         filePart.write(filePath);
 
-        try {
-            // 1. extract text
-            String fullText = PDFExtractor.extractText(filePath);
-            if (isEmpty(fullText)) {
-                throw new Exception("Không thể trích xuất nội dung từ file PDF.");
-            }
+        logger.info("📁 File saved to: " + filePath);
 
-            // 2. detect chapters bằng AI
+        try {
+            // ========== BƯỚC 1: EXTRACT TEXT TỪ PDF ==========
+            logger.info("📄 Step 1: Extracting text from PDF...");
+            String fullText = PDFExtractor.extractText(filePath);
+            
+            if (isEmpty(fullText)) {
+                throw new Exception("Không thể trích xuất nội dung từ file PDF. File có thể bị lỗi hoặc là ảnh scan.");
+            }
+            
+            logger.info("✅ Extracted text length: " + fullText.length() + " characters");
+
+            // ========== BƯỚC 2: DETECT & DIVIDE CHAPTERS BẰNG RAG AI ==========
+            logger.info("🤖 Step 2: AI analyzing and dividing chapters...");
             ChapterAIDetector aiDetector = new ChapterAIDetector();
             List<Chapter> chapters = aiDetector.detectChapters(fullText);
+            
             if (chapters == null || chapters.isEmpty()) {
-                throw new Exception("AI không thể chia chương.");
+                throw new Exception("AI không thể chia chương. Có thể do cấu trúc sách không rõ ràng.");
             }
+            
+            logger.info("✅ AI detected " + chapters.size() + " chapters");
 
-            // 3. insert book
+            // ========== BƯỚC 3: LƯU BOOK VÀO DATABASE ==========
+            logger.info("💾 Step 3: Saving book to database...");
             Book book = new Book(title, author, major, description);
             book.setFilePath("/uploads/" + safeFileName);
+            
             int bookId = bookDAO.insertBook(book);
             if (bookId <= 0) {
-                throw new Exception("Không thể lưu thông tin sách.");
+                throw new Exception("Không thể lưu thông tin sách vào database.");
             }
+            
+            logger.info("✅ Book saved with ID: " + bookId);
+
+            // ========== BƯỚC 4: LƯU CHAPTERS VÀO DATABASE ==========
+            logger.info("💾 Step 4: Saving chapters to database...");
+            
+            // Set BookID cho tất cả chapters
+            for (Chapter chapter : chapters) {
+                chapter.setBookID(bookId);
+            }
+            
+            // Batch insert tất cả chapters cùng lúc
+            boolean chaptersInserted = chapterDAO.insertChaptersBatch(chapters);
+            
+            if (!chaptersInserted) {
+                logger.warning("⚠️ Failed to insert some chapters");
+            } else {
+                logger.info("✅ All chapters saved successfully");
+            }
+
+            // ========== THÀNH CÔNG ==========
             request.getSession().setAttribute("successMessage",
-                "Upload sách và chia chương bằng AI thành công! Tổng: " + chapters.size() + " chương.");
-            response.sendRedirect("bookcrud?action=list");
+                "🎉 Upload sách và chia chương bằng AI thành công! " +
+                "Tổng: " + chapters.size() + " chương được phát hiện.");
+            
+            response.sendRedirect("book-detail.jsp?bookId=" + bookId);
 
         } catch (Exception e) {
-            logger.log(Level.SEVERE, "Lỗi khi xử lý upload sách", e);
+            logger.log(Level.SEVERE, "❌ Error processing PDF upload", e);
+            
+            // Cleanup: Xóa file nếu xử lý thất bại
+            File uploadedFile = new File(filePath);
+            if (uploadedFile.exists()) {
+                uploadedFile.delete();
+                logger.info("🗑️ Cleaned up uploaded file due to error");
+            }
+            
             request.setAttribute("error", "Lỗi khi xử lý file: " + e.getMessage());
             request.getRequestDispatcher("book-upload.jsp").forward(request, response);
         }
     }
 
-    // ========================= UTIL =========================
+    // ========================= UTILITY =========================
 
     private boolean isEmpty(String str) {
         return str == null || str.trim().isEmpty();

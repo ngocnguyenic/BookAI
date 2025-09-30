@@ -29,8 +29,7 @@
         <version>${jakartaee.version}</version>
         <scope>provided</scope>
     </dependency>
-
-    <!-- JSTL -->
+    
     <dependency>
         <groupId>jakarta.servlet.jsp.jstl</groupId>
         <artifactId>jakarta.servlet.jsp.jstl-api</artifactId>
@@ -42,21 +41,18 @@
         <version>3.0.1</version>
     </dependency>
 
-    <!-- SQL Server JDBC driver -->
     <dependency>
         <groupId>com.microsoft.sqlserver</groupId>
         <artifactId>mssql-jdbc</artifactId>
         <version>12.4.2.jre11</version>
     </dependency>
 
-    <!-- JSON (Gson) -->
     <dependency>
         <groupId>com.google.code.gson</groupId>
         <artifactId>gson</artifactId>
         <version>2.11.0</version>
     </dependency>
 
-    <!-- JSON (org.json) -->
     <dependency>
         <groupId>org.json</groupId>
         <artifactId>json</artifactId>
@@ -67,6 +63,13 @@
     <artifactId>pdfbox</artifactId>
     <version>2.0.29</version>
 </dependency>
+
+<dependency>
+  <groupId>io.pinecone</groupId>
+  <artifactId>pinecone-client</artifactId>
+  <version>5.0.0</version>
+</dependency>
+
 
 </dependencies>
 
