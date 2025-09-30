@@ -16,52 +16,76 @@ public class GeminiService {
     private final String apiUrl = ConfigAPIKey.getProperty("gemini.base.url");
     private final String apiKey = ConfigAPIKey.getProperty("gemini.api.key");
 
+    // Optimized: Summary chi tiết hơn
+ public String generateChapterSummary(String chapterTitle, String chapterContent) throws IOException {
+    String prompt = """
+        Bạn là giảng viên đại học. Tạo bản tóm tắt CHI TIẾT cho chương sách sau theo ĐÚNG FORMAT bên dưới:
+        
+        FORMAT BẮT BUỘC:
+        
+        TỔNG QUAN:
+        [2-3 câu giới thiệu chung về chương này]
+        
+        NỘI DUNG CHÍNH:
+        • [Điểm quan trọng 1 - giải thích 1-2 câu]
+        • [Điểm quan trọng 2 - giải thích 1-2 câu]
+        • [Điểm quan trọng 3 - giải thích 1-2 câu]
+        • [Điểm quan trọng 4 - giải thích 1-2 câu]
+        
+        KHÁI NIỆM THEN CHỐT:
+        - [Khái niệm 1]: [Định nghĩa ngắn]
+        - [Khái niệm 2]: [Định nghĩa ngắn]
+        - [Khái niệm 3]: [Định nghĩa ngắn]
+        
+        ỨNG DỤNG/VÍ DỤ:
+        [Ví dụ thực tế hoặc ứng dụng của nội dung chương - 2-3 câu]
+        
+        ---
+        
+        YÊU CẦU:
+        - Độ dài tối thiểu: 250 từ
+        - PHẢI có đủ 4 phần: TỔNG QUAN, NỘI DUNG CHÍNH (4 điểm), KHÁI NIỆM (3 khái niệm), ỨNG DỤNG
+        - Mỗi điểm phải có giải thích cụ thể, KHÔNG được chỉ liệt kê
+        - Viết bằng tiếng Việt học thuật, rõ ràng
+        - Dựa 100% vào nội dung được cung cấp
+        
+        CHƯƠNG: """ + chapterTitle + """
+        
+        NỘI DUNG:
+        """ + chapterContent + """
+        
+        BẮT ĐẦU TÓM TẮT THEO FORMAT:
+        """;
 
-    public String generateChapterSummary(String chapterTitle, String chapterContent) throws IOException {
-        String prompt = "Summarize the following book chapter in a concise and clear way for students:\n\n"
-                + "Chapter Title: " + chapterTitle + "\n\n"
-                + "Content: " + chapterContent;
-
-        return callGemini(prompt);
-    }
-
+    return callGemini(prompt);
+}
     public String generateQAPairs(String chapterTitle, String chapterContent) throws IOException {
-        String prompt = "Generate 3 study questions and their answers based on the following chapter. "
-                + "Return as JSON array with fields 'question' and 'answer'.\n\n"
-                + "Chapter Title: " + chapterTitle + "\n\n"
-                + "Content: " + chapterContent;
+        String prompt = """
+            Tạo 3 câu hỏi ôn tập và đáp án cho chương này.
+            Trả về JSON format: [{"question":"...","answer":"..."}]
+            
+            CHƯƠNG: """ + chapterTitle + """
+            NỘI DUNG: """ + chapterContent;
 
         return callGemini(prompt);
     }
 
     public String detectChaptersWithAI(String fullBookText) throws IOException {
         String prompt = """
-ou are an expert in analyzing the structure of academic books. Read the BOOK_CONTENT below and split it into a logical sequence of chapters.
-
-Rules:
-1) Ignore front matter: Preface, Foreword, Introduction, Table of Contents, and Appendices — unless they contain substantive instructional content. Only include these if they add meaningful content.
-2) For each chapter produce an object with:
-   - "chapterNumber": integer (start at 1 and increment by 1)
-   - "title": short title (<= 50 characters)
-   - "content": the full chapter text, preserving paragraphs and sentence order (do NOT summarize or invent content).
-3) If the book already has explicit chapter headings, use them. If you must infer a title, keep it concise (3–7 words).
-4) Prefer coherent, reasonably sized chapters; avoid creating many tiny chapters. If uncertain, merge related parts rather than split.
-5) OUTPUT RULE (must obey): return **only** a single valid JSON object with this exact top-level shape:
-{
-  "chapters": [
-    { "chapterNumber": 1, "title": "...", "content": "..." },
-    ...
-  ]
-}
-Do NOT include any additional text, commentary, Markdown, or metadata. Ensure the JSON is UTF-8 and syntactically valid (properly escaped).
-6) If no chapters can be identified, return: { "chapters": [] }
-
-BOOK_CONTENT:
-""" + fullBookText;
+            Phân tích và chia sách thành các chương logic.
+            
+            QUY TẮC:
+            1) Bỏ qua lời nói đầu, mục lục, phụ lục
+            2) Mỗi chương có: chapterNumber (int), title (ngắn gọn), content (toàn bộ)
+            3) Ưu tiên các tiêu đề rõ ràng trong sách
+            4) Merge các phần nhỏ thành chương lớn hơn
+            5) TRẢ VỀ JSON: {"chapters":[{"chapterNumber":1,"title":"...","content":"..."}]}
+            
+            NỘI DUNG SÁCH:
+            """ + fullBookText;
 
         return callGemini(prompt);
     }
-
 
     private String callGemini(String prompt) throws IOException {
         String urlStr = apiUrl + "?key=" + apiKey;
@@ -71,9 +95,7 @@ BOOK_CONTENT:
         conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
         conn.setDoOutput(true);
 
-    
-        String requestBody = "{ \"contents\": [ { \"parts\": [ { \"text\": \"" 
-                + escapeJson(prompt) + "\" } ] } ] }";
+        String requestBody = "{\"contents\":[{\"parts\":[{\"text\":\"" + escapeJson(prompt) + "\"}]}]}";
 
         try (OutputStream os = conn.getOutputStream()) {
             os.write(requestBody.getBytes(StandardCharsets.UTF_8));
@@ -81,18 +103,14 @@ BOOK_CONTENT:
 
         int code = conn.getResponseCode();
         StringBuilder response = new StringBuilder();
-        Scanner scanner;
-
-        if (code == 200) {
-            scanner = new Scanner(conn.getInputStream(), StandardCharsets.UTF_8.name());
-        } else {
-            scanner = new Scanner(conn.getErrorStream(), StandardCharsets.UTF_8.name());
+        
+        try (Scanner scanner = new Scanner(
+            code == 200 ? conn.getInputStream() : conn.getErrorStream(), 
+            StandardCharsets.UTF_8)) {
+            while (scanner.hasNextLine()) {
+                response.append(scanner.nextLine());
+            }
         }
-
-        while (scanner.hasNextLine()) {
-            response.append(scanner.nextLine());
-        }
-        scanner.close();
 
         if (code != 200) {
             throw new IOException("Gemini API error: " + code + " - " + response);
@@ -101,36 +119,25 @@ BOOK_CONTENT:
         return parseGeminiResponse(response.toString());
     }
 
-
-
     private String parseGeminiResponse(String json) {
         JSONObject root = new JSONObject(json);
-
-        if (!root.has("candidates")) {
-            return json;
-        }
-
-        JSONArray candidates = root.getJSONArray("candidates");
-        if (candidates.isEmpty()) {
+        
+        if (!root.has("candidates") || root.getJSONArray("candidates").isEmpty()) {
             return "";
         }
 
-        JSONObject firstCandidate = candidates.getJSONObject(0);
-        JSONObject content = firstCandidate.getJSONObject("content");
-        JSONArray parts = content.getJSONArray("parts");
+        JSONObject firstCandidate = root.getJSONArray("candidates").getJSONObject(0);
+        JSONArray parts = firstCandidate.getJSONObject("content").getJSONArray("parts");
 
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < parts.length(); i++) {
-            JSONObject part = parts.getJSONObject(i);
-            if (part.has("text")) {
-                sb.append(part.getString("text")).append("\n");
+            if (parts.getJSONObject(i).has("text")) {
+                sb.append(parts.getJSONObject(i).getString("text")).append("\n");
             }
         }
 
         return sb.toString().trim();
     }
-
-  
 
     private String escapeJson(String s) {
         if (s == null) return "";

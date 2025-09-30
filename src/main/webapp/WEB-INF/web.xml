@@ -12,6 +12,10 @@
         <servlet-name>BookDetailServlet</servlet-name>
         <servlet-class>controller.Book.BookDetailServlet</servlet-class>
     </servlet>
+    <servlet>
+        <servlet-name>RAGQueryServlet</servlet-name>
+        <servlet-class>controller.AI.RAGQueryServlet</servlet-class>
+    </servlet>
     <servlet-mapping>
         <servlet-name>BookCrud</servlet-name>
         <url-pattern>/bookcrud</url-pattern>
@@ -23,6 +27,10 @@
     <servlet-mapping>
         <servlet-name>BookDetailServlet</servlet-name>
         <url-pattern>/bookdetail</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>RAGQueryServlet</servlet-name>
+        <url-pattern>/rag-query</url-pattern>
     </servlet-mapping>
     <session-config>
         <session-timeout>
