@@ -7,45 +7,68 @@
         return;
     }
 %>
+<!DOCTYPE html>
 <html>
 <head>
-    <title>📚 Quản lý sách</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-    <script src="https://code.responsivevoice.org/responsivevoice.js?key=eW5KOf7Q"></script>
+    <meta charset="UTF-8">
+    <title>Quản lý sách</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        .tts-controls { margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 5px; border: 1px solid #dee2e6; }
-        .tts-btn { margin: 2px; padding: 5px 10px; font-size: 12px; }
-        .voice-settings { margin-top: 8px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-        .voice-settings label { font-size: 12px; margin: 0; }
-        .voice-settings select, .voice-settings input { font-size: 12px; padding: 3px 6px; }
-        #aiResult { max-height: 200px; overflow-y: auto; }
-        .action-btn { white-space: nowrap; }
+        .action-btn { white-space: nowrap; margin: 2px; }
+        .rag-message {
+            padding: 10px 15px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            max-width: 80%;
+            animation: fadeIn 0.3s;
+        }
+        .rag-message.user {
+            background: #e3f2fd;
+            margin-left: auto;
+            text-align: right;
+        }
+        .rag-message.assistant {
+            background: white;
+            border: 1px solid #dee2e6;
+        }
+        .rag-message.loading {
+            text-align: center;
+            color: #999;
+            font-style: italic;
+            max-width: 100%;
+        }
+        .rag-sources {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #eee;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .example-badge {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .example-badge:hover {
+            background-color: #667eea !important;
+            color: white !important;
+        }
     </style>
 </head>
 <body class="container mt-4">
 
-<h2 class="mb-3">📚 Quản lý sách</h2>
+<h2 class="mb-3">Quản lý sách</h2>
 
-<!-- NÚT UPLOAD PDF -->
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <a href="book-upload.jsp" class="btn btn-info">
-        📤 Upload sách PDF
-    </a>
+    <a href="book-upload.jsp" class="btn btn-info">Upload sách PDF</a>
 </div>
 
-<!-- FORM THÊM SÁCH THỦ CÔNG -->
-<form action="bookcrud" method="post" class="mb-4">
-    <input type="hidden" name="action" value="insert"/>
-    <div class="row g-2">
-        <div class="col-md-3"><input type="text" name="title" class="form-control" placeholder="Tiêu đề" required></div>
-        <div class="col-md-2"><input type="text" name="author" class="form-control" placeholder="Tác giả" required></div>
-        <div class="col-md-2"><input type="text" name="major" class="form-control" placeholder="Chuyên ngành"></div>
-        <div class="col-md-3"><input type="text" name="description" class="form-control" placeholder="Mô tả"></div>
-        <div class="col-md-2"><button type="submit" class="btn btn-primary w-100">➕ Thêm sách</button></div>
-    </div>
-</form>
 
-<!-- BẢNG DANH SÁCH SÁCH -->
+
+<!-- Bảng danh sách -->
 <table class="table table-bordered table-hover align-middle">
     <thead class="table-dark">
         <tr class="text-center">
@@ -69,23 +92,14 @@
             <td><%= b.getMajor() %></td>
             <td><%= b.getDescription() != null ? b.getDescription() : "" %></td>
             <td class="text-center">
-                <!-- NÚT MỞ FILE PDF (nếu có) -->
-                <%
-                    if (b.getFilePath() != null && !b.getFilePath().trim().isEmpty()) {
-                %>
-                    <a href="<%= request.getContextPath() %><%= b.getFilePath() %>" target="_blank" class="btn btn-secondary btn-sm action-btn">
-                        📄 Mở PDF
-                    </a>
-                <%
-                    }
-                %>
-                <!-- NÚT XEM CHƯƠNG -->
-                <a href="bookdetail?id=<%= b.getBookID() %>" class="btn btn-info btn-sm action-btn">
-                    📖 Chương
-                </a>
-                <!-- NÚT EDIT/DELETE -->
+                <% if (b.getFilePath() != null && !b.getFilePath().trim().isEmpty()) { %>
+                    <a href="<%= request.getContextPath() %><%= b.getFilePath() %>" 
+                       target="_blank" class="btn btn-secondary btn-sm action-btn">Mở PDF</a>
+                <% } %>
+                <a href="bookdetail?id=<%= b.getBookID() %>" class="btn btn-info btn-sm action-btn">Chương</a>
                 <a href="bookcrud?action=edit&id=<%= b.getBookID() %>" class="btn btn-warning btn-sm action-btn">Sửa</a>
-                <a href="bookcrud?action=delete&id=<%= b.getBookID() %>" class="btn btn-danger btn-sm action-btn"
+                <a href="bookcrud?action=delete&id=<%= b.getBookID() %>" 
+                   class="btn btn-danger btn-sm action-btn"
                    onclick="return confirm('Xóa sách này?')">Xóa</a>
             </td>
         </tr>
@@ -100,70 +114,36 @@
     </tbody>
 </table>
 
-<!-- NÚT AI CHAT (giữ nguyên) -->
-<button class="btn btn-success position-fixed shadow" style="bottom: 20px; right: 20px;" 
-        data-bs-toggle="modal" data-bs-target="#aiChatModal">
-    🤖 AI Chat
+<!-- Button RAG Chat -->
+<button class="btn btn-success position-fixed shadow" 
+        style="bottom: 20px; right: 20px; z-index: 1000;" 
+        data-bs-toggle="modal" data-bs-target="#ragChatModal">
+    RAG Chat
 </button>
 
-<!-- MODAL AI CHAT (giữ nguyên) -->
-<div class="modal fade" id="aiChatModal" tabindex="-1">
-  <div class="modal-dialog modal-lg modal-dialog-centered">
+<!-- Modal RAG Chat -->
+<div class="modal fade" id="ragChatModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
     <div class="modal-content">
-      <div class="modal-header bg-primary text-white">
-        <h5 class="modal-title">AI Assistant with Text-to-Speech</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+        <h5 class="modal-title">RAG Chat - Trợ lý học tập AI</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
-      <div class="modal-body">
-        <form id="aiForm">
-          <div class="mb-2">
-            <label class="form-label">Chapter Title:</label>
-            <input type="text" id="aiTitle" class="form-control" placeholder="Enter chapter title" required>
+      <div class="modal-body p-0">
+        <!-- Chat Box -->
+        <div id="ragChatBox" style="height: 400px; overflow-y: auto; padding: 20px; background: #f8f9fa;">
+          <div class="rag-message assistant">
+            Xin chào! Tôi có thể giúp bạn tìm thông tin từ tài liệu trong thư viện. Hãy đặt câu hỏi!
           </div>
-          <div class="mb-2">
-            <label class="form-label">Chapter Content:</label>
-            <textarea id="aiContent" class="form-control" rows="4" placeholder="Enter content..." required></textarea>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Function:</label>
-            <select id="aiAction" class="form-select">
-              <option value="summary">Summary</option>
-              <option value="qa">Q&A</option>
-            </select>
-          </div>
-          <button type="submit" class="btn btn-primary w-100" id="submitBtn">
-            Ask AI
-          </button>
-        </form>
-        
-        <hr>
-        
-        <label class="form-label">AI Response:</label>
-        <div id="aiResult" class="p-3 border rounded bg-light" style="min-height: 100px; white-space: pre-wrap;">
-          Waiting for AI response...
         </div>
         
-        <div class="tts-controls" id="ttsControls" style="display: none;">
-          <div class="mb-2"><strong>Text-to-Speech Controls</strong></div>
-          <div class="d-flex gap-2 mb-2">
-            <button type="button" class="btn btn-success btn-sm tts-btn" onclick="startSpeaking()" id="playBtn">Play</button>
-            <button type="button" class="btn btn-danger btn-sm tts-btn" onclick="stopSpeaking()" id="stopBtn" disabled>Stop</button>
-          </div>
-          <div class="voice-settings">
-            <label>Voice:</label>
-            <select id="voiceSelect" class="form-select form-select-sm" style="width: auto;">
-              <option value="Vietnamese Female">Vietnamese Female</option>
-              <option value="Vietnamese Male">Vietnamese Male</option>
-              <option value="UK English Female">UK English Female</option>
-              <option value="UK English Male">UK English Male</option>
-              <option value="US English Female">US English Female</option>
-            </select>
-            <label>Speed:</label>
-            <input type="range" id="speedRange" min="0.1" max="2" step="0.1" value="1" class="form-range" style="width: 80px;">
-            <span id="speedValue">1.0x</span>
-            <label>Pitch:</label>
-            <input type="range" id="pitchRange" min="0" max="2" step="0.1" value="1" class="form-range" style="width: 80px;">
-            <span id="pitchValue">1.0</span>
+        <!-- Input Box -->
+        <div style="padding: 15px; background: white; border-top: 1px solid #dee2e6;">
+          <div class="input-group">
+            <input type="text" id="ragQuestionInput" class="form-control" 
+                   placeholder="Nhập câu hỏi của bạn..." 
+                   onkeypress="if(event.key==='Enter') sendRAGQuestion()">
+            <button class="btn btn-primary" onclick="sendRAGQuestion()">Gửi</button>
           </div>
         </div>
       </div>
@@ -171,70 +151,80 @@
   </div>
 </div>
 
-<!-- SCRIPTS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-let currentText = '';
-
-document.getElementById("aiForm").addEventListener("submit", async function(e) {
-    e.preventDefault();
-    const title = document.getElementById("aiTitle").value;
-    const content = document.getElementById("aiContent").value;
-    const action = document.getElementById("aiAction").value;
-    const resultDiv = document.getElementById("aiResult");
-
-    resultDiv.innerHTML = "AI is processing...";
-
-    const params = new URLSearchParams();
-    params.append("action", action);
-    params.append("title", title);
-    params.append("content", content);
-
-    const response = await fetch("aiservlet", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: params
-    });
-
-    const responseText = await response.text();
-    resultDiv.innerHTML = responseText;
-    currentText = responseText;
-    if (currentText.trim()) {
-        document.getElementById("ttsControls").style.display = "block";
-    }
-});
-
-function startSpeaking() {
-    if (!currentText.trim()) return;
-    responsiveVoice.cancel();
-    document.getElementById("playBtn").disabled = true;
-    document.getElementById("stopBtn").disabled = false;
-    responsiveVoice.speak(currentText, document.getElementById("voiceSelect").value, {
-        rate: parseFloat(document.getElementById("speedRange").value),
-        pitch: parseFloat(document.getElementById("pitchRange").value),
-        onend: () => {
-            document.getElementById("playBtn").disabled = false;
-            document.getElementById("stopBtn").disabled = true;
+async function sendRAGQuestion() {
+    const input = document.getElementById('ragQuestionInput');
+    const question = input.value.trim();
+    
+    if (!question) return;
+    
+    addRAGMessage('user', question);
+    input.value = '';
+    
+    addRAGMessage('loading', 'Đang tìm kiếm và phân tích...');
+    
+    try {
+        const response = await fetch('<%= request.getContextPath() %>/rag-chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'question=' + encodeURIComponent(question)
+        });
+        
+        const data = await response.json();
+        
+        const loadingMsg = document.querySelector('.rag-message.loading');
+        if (loadingMsg) loadingMsg.remove();
+        
+        if (data.error) {
+            addRAGMessage('assistant', 'Lỗi: ' + data.error);
+        } else {
+            let message = data.answer;
+            
+            if (data.sources && data.sources.length > 0) {
+                message += '<div class="rag-sources">Nguồn tham khảo: ';
+                data.sources.forEach((s, i) => {
+                    message += (i > 0 ? '; ' : '') + 'Chương ' + s.chapterNumber + ': ' + s.title;
+                });
+                message += '</div>';
+            }
+            
+            addRAGMessage('assistant', message);
         }
-    });
+    } catch (error) {
+        const loadingMsg = document.querySelector('.rag-message.loading');
+        if (loadingMsg) loadingMsg.remove();
+        addRAGMessage('assistant', 'Lỗi kết nối: ' + error.message);
+    }
 }
 
-function stopSpeaking() {
-    responsiveVoice.cancel();
-    document.getElementById("playBtn").disabled = false;
-    document.getElementById("stopBtn").disabled = true;
+function addRAGMessage(type, content) {
+    const chatBox = document.getElementById('ragChatBox');
+    const div = document.createElement('div');
+    div.className = 'rag-message ' + type;
+    
+    if (type === 'assistant' && content.includes('<div class="rag-sources">')) {
+        div.innerHTML = content;
+    } else {
+        div.textContent = content;
+    }
+    
+    chatBox.appendChild(div);
+    chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-document.getElementById('aiChatModal').addEventListener('hidden.bs.modal', function () {
-    stopSpeaking();
+function askExample(question) {
+    document.getElementById('ragQuestionInput').value = question;
+    sendRAGQuestion();
+}
+
+document.getElementById('ragChatModal').addEventListener('shown.bs.modal', function () {
+    document.getElementById('ragQuestionInput').focus();
 });
 
-// Hiển thị giá trị speed/pitch
-document.getElementById('speedRange').addEventListener('input', function() {
-    document.getElementById('speedValue').textContent = this.value + 'x';
-});
-document.getElementById('pitchRange').addEventListener('input', function() {
-    document.getElementById('pitchValue').textContent = this.value;
+document.getElementById('ragChatModal').addEventListener('hidden.bs.modal', function () {
+    const chatBox = document.getElementById('ragChatBox');
+    chatBox.innerHTML = '<div class="rag-message assistant">Xin chào! Tôi có thể giúp bạn tìm thông tin từ tài liệu trong thư viện. Hãy đặt câu hỏi!</div>';
 });
 </script>
 </body>

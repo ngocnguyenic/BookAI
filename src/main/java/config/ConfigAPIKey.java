@@ -1,27 +1,50 @@
 package config;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
-
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class ConfigAPIKey {
-    private static final Properties properties = new Properties();
-
+    
+    private static final Logger logger = Logger.getLogger(ConfigAPIKey.class.getName());
+    private static Properties properties = new Properties();
+    
     static {
-        try (InputStream input = ConfigAPIKey.class.getClassLoader().getResourceAsStream("config.properties")) {
-
-
+        try {
+        
+            InputStream input = ConfigAPIKey.class.getClassLoader()
+                    .getResourceAsStream("config.properties");
+            
             if (input == null) {
-                System.out.println("Lỗi: không tìm thấy file config.properties. Hãy chắc chắn nó nằm trong thư mục 'resources'.");
-
+                logger.warning("config.properties not found in classpath");
+            } else {
+                properties.load(input);
+                logger.info("Config loaded successfully with " + properties.size() + " properties");
+                
+                // Debug: In ra tất cả keys
+                properties.keySet().forEach(key -> 
+                    logger.info("Config key: " + key + " = " + properties.getProperty(key.toString()))
+                );
             }
-            properties.load(input);
-        } catch (Exception ex) {
-            ex.printStackTrace();
+        } catch (IOException e) {
+            logger.log(Level.SEVERE, "Failed to load config.properties", e);
         }
     }
-
+    
     public static String getProperty(String key) {
-        return properties.getProperty(key);
+        String value = properties.getProperty(key);
+        
+        if (value == null) {
+            logger.warning("Property '" + key + "' not found in config");
+            logger.info("Available keys: " + properties.keySet());
+        }
+        
+        return value;
+    }
+    
+    public static String getProperty(String key, String defaultValue) {
+        return properties.getProperty(key, defaultValue);
     }
 }

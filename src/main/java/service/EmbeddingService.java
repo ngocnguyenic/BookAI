@@ -12,19 +12,32 @@ import java.util.Scanner;
 import java.util.logging.Logger;
 import javax.net.ssl.HttpsURLConnection;
 
-/**
- * Service để generate vector embeddings từ text sử dụng Gemini Embedding API
- */
+
 public class EmbeddingService {
     
     private static final Logger logger = Logger.getLogger(EmbeddingService.class.getName());
+    
+    // Default embedding URL (khác với generateContent URL)
+    private static final String DEFAULT_EMBEDDING_URL = "https://generativelanguage.googleapis.com/v1beta/models/embedding-001:embedContent";
     
     private final String embeddingUrl;
     private final String apiKey;
     
     public EmbeddingService() {
-        this.embeddingUrl = ConfigAPIKey.getProperty("gemini.embedding.url");
-        this.apiKey = ConfigAPIKey.getProperty("gemini.embedding.key");
+        // Đọc API key từ config (dùng chung với Gemini)
+        String configKey = ConfigAPIKey.getProperty("gemini.api.key");
+        
+        if (configKey == null || configKey.trim().isEmpty()) {
+            throw new RuntimeException("CRITICAL: gemini.api.key is not configured! Check your config.properties file.");
+        }
+        this.apiKey = configKey.trim();
+        
+        // Dùng URL riêng cho embedding (không dùng gemini.base.url)
+        this.embeddingUrl = DEFAULT_EMBEDDING_URL;
+        
+        logger.info(" EmbeddingService initialized successfully");
+        logger.info(" Embedding URL: " + embeddingUrl);
+        logger.info(" API Key: " + apiKey.substring(0, 10) + "...");
     }
     
     /**
@@ -49,8 +62,10 @@ public class EmbeddingService {
         conn.setRequestMethod("POST");
         conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
         conn.setDoOutput(true);
+        conn.setConnectTimeout(10000);
+        conn.setReadTimeout(30000);
         
-        // Build request body
+       
         JSONObject content = new JSONObject();
         content.put("model", "models/embedding-001");
         
@@ -64,6 +79,8 @@ public class EmbeddingService {
         contentObj.put("parts", parts);
         
         content.put("content", contentObj);
+        
+        logger.fine("Sending embedding request for text length: " + text.length());
         
         // Send request
         try (OutputStream os = conn.getOutputStream()) {
@@ -82,7 +99,7 @@ public class EmbeddingService {
                 response.append(scanner.nextLine());
             }
             scanner.close();
-            throw new IOException("Embedding API error: " + code + " - " + response);
+            throw new IOException("Embedding API error " + code + ": " + response);
         }
         
         while (scanner.hasNextLine()) {
@@ -100,7 +117,7 @@ public class EmbeddingService {
         JSONObject root = new JSONObject(jsonResponse);
         
         if (!root.has("embedding")) {
-            throw new RuntimeException("Response doesn't contain embedding field");
+            throw new RuntimeException("Response doesn't contain embedding field. Response: " + jsonResponse);
         }
         
         JSONObject embedding = root.getJSONObject("embedding");
@@ -111,17 +128,15 @@ public class EmbeddingService {
             vector[i] = (float) values.getDouble(i);
         }
         
-        logger.info("Generated embedding with dimension: " + vector.length);
+        logger.info(" Generated embedding with dimension: " + vector.length);
         return vector;
     }
-    
-    /**
-     * Generate embeddings cho nhiều texts cùng lúc (batch)
-     */
+
     public float[][] generateEmbeddingsBatch(String[] texts) throws IOException {
         float[][] embeddings = new float[texts.length][];
         
         for (int i = 0; i < texts.length; i++) {
+            logger.info("Generating embedding " + (i + 1) + "/" + texts.length);
             embeddings[i] = generateEmbedding(texts[i]);
             
             // Rate limiting: wait 200ms between requests
@@ -134,6 +149,7 @@ public class EmbeddingService {
             }
         }
         
+        logger.info("✓ Generated " + texts.length + " embeddings successfully");
         return embeddings;
     }
 }

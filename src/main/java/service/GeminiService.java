@@ -16,47 +16,47 @@ public class GeminiService {
     private final String apiUrl = ConfigAPIKey.getProperty("gemini.base.url");
     private final String apiKey = ConfigAPIKey.getProperty("gemini.api.key");
 
-    // Optimized: Summary chi tiết hơn
- public String generateChapterSummary(String chapterTitle, String chapterContent) throws IOException {
+
+public String generateChapterSummary(String chapterTitle, String chapterContent) throws IOException {
     String prompt = """
-        Bạn là giảng viên đại học. Tạo bản tóm tắt CHI TIẾT cho chương sách sau theo ĐÚNG FORMAT bên dưới:
+        Tóm tắt chương sách đại học sau theo cấu trúc rõ ràng:
         
-        FORMAT BẮT BUỘC:
+        📋 FORMAT:
         
         TỔNG QUAN:
-        [2-3 câu giới thiệu chung về chương này]
+        [Giới thiệu chung 2-3 câu về nội dung chương]
         
         NỘI DUNG CHÍNH:
-        • [Điểm quan trọng 1 - giải thích 1-2 câu]
-        • [Điểm quan trọng 2 - giải thích 1-2 câu]
-        • [Điểm quan trọng 3 - giải thích 1-2 câu]
-        • [Điểm quan trọng 4 - giải thích 1-2 câu]
+        • [Điểm 1: Giải thích chi tiết]
+        • [Điểm 2: Giải thích chi tiết]
+        • [Điểm 3: Giải thích chi tiết]
+        • [Điểm 4: Giải thích chi tiết]
         
-        KHÁI NIỆM THEN CHỐT:
-        - [Khái niệm 1]: [Định nghĩa ngắn]
-        - [Khái niệm 2]: [Định nghĩa ngắn]
-        - [Khái niệm 3]: [Định nghĩa ngắn]
+        KHÁI NIỆM/THUẬT NGỮ QUAN TRỌNG:
+        - [Thuật ngữ 1]: [Định nghĩa rõ ràng]
+        - [Thuật ngữ 2]: [Định nghĩa rõ ràng]
+        - [Thuật ngữ 3]: [Định nghĩa rõ ràng]
         
         ỨNG DỤNG/VÍ DỤ:
-        [Ví dụ thực tế hoặc ứng dụng của nội dung chương - 2-3 câu]
+        [Ứng dụng thực tế hoặc ví dụ minh họa 2-3 câu]
         
-        ---
-        
-        YÊU CẦU:
-        - Độ dài tối thiểu: 250 từ
-        - PHẢI có đủ 4 phần: TỔNG QUAN, NỘI DUNG CHÍNH (4 điểm), KHÁI NIỆM (3 khái niệm), ỨNG DỤNG
-        - Mỗi điểm phải có giải thích cụ thể, KHÔNG được chỉ liệt kê
-        - Viết bằng tiếng Việt học thuật, rõ ràng
-        - Dựa 100% vào nội dung được cung cấp
+        ⚠️ QUY TẮC QUAN TRỌNG:
+        1. GIỮ NGUYÊN tất cả thuật ngữ chuyên môn (tiếng Anh, ký hiệu, công thức)
+        2. Giải thích BẰ
+
+NG TIẾNG VIỆT rõ ràng, dễ hiểu
+        3. Nếu có công thức/code/ký hiệu → giữ nguyên format
+        4. Độ dài: 250-350 từ
+        5. Dựa 100% vào nội dung gốc
         
         CHƯƠNG: """ + chapterTitle + """
         
-        NỘI DUNG:
+        NỘI DUNG GỐC:
         """ + chapterContent + """
         
-        BẮT ĐẦU TÓM TẮT THEO FORMAT:
+        TÓM TẮT:
         """;
-
+    
     return callGemini(prompt);
 }
     public String generateQAPairs(String chapterTitle, String chapterContent) throws IOException {

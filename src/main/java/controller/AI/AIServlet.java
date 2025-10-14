@@ -1,73 +1,110 @@
 package controller.AI;
 
-import service.GeminiService;
-import com.google.gson.JsonArray;
+import service.OllamaService; 
+import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.google.gson.JsonSyntaxException;
-
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class AIServlet extends HttpServlet {
-
-    private final GeminiService geminiService = new GeminiService();
-
+    
+    private static final Logger logger = Logger.getLogger(AIServlet.class.getName());
+    private final OllamaService ollamaService = new OllamaService(); // THAY ĐỔI
+    private final Gson gson = new Gson();
+    
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         processRequest(request, response);
     }
-
+    
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         processRequest(request, response);
     }
-
+    
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-
+        
         response.setContentType("application/json;charset=UTF-8");
-
+        
         String action = request.getParameter("action");
         String chapterTitle = request.getParameter("title");
         String chapterContent = request.getParameter("content");
-
-        try {
-            String rawResult;
-            if ("summary".equalsIgnoreCase(action)) {
-                rawResult = geminiService.generateChapterSummary(chapterTitle, chapterContent);
-            } else if ("qa".equalsIgnoreCase(action)) {
-                rawResult = geminiService.generateQAPairs(chapterTitle, chapterContent);
-            } else {
-                rawResult = "{\"error\":\"Unknown action. Use 'summary' or 'qa'\"}";
-            }
-
-            
-            String cleanText = rawResult;
-            try {
-                JsonObject json = JsonParser.parseString(rawResult).getAsJsonObject();
-                JsonArray candidates = json.getAsJsonArray("candidates");
-                if (candidates != null && candidates.size() > 0) {
-                    JsonObject first = candidates.get(0).getAsJsonObject();
-                    JsonArray parts = first.getAsJsonObject("content").getAsJsonArray("parts");
-                    if (parts != null && parts.size() > 0) {
-                        cleanText = parts.get(0).getAsJsonObject().get("text").getAsString();
-                    }
-                }
-            } catch (JsonSyntaxException parseEx) {
-                
-                cleanText = rawResult;
-            }
-
-            response.getWriter().write(cleanText);
-
-        } catch (IOException e) {
-            response.getWriter().write("{\"error\":\"" + e.getMessage() + "\"}");
+        
+        // Validation
+        if (action == null || action.trim().isEmpty()) {
+            sendErrorResponse(response, "Missing 'action' parameter. Use 'summary' or 'qa'");
+            return;
         }
+        
+        if (chapterTitle == null || chapterTitle.trim().isEmpty()) {
+            sendErrorResponse(response, "Missing 'title' parameter");
+            return;
+        }
+        
+        if (chapterContent == null || chapterContent.trim().isEmpty()) {
+            sendErrorResponse(response, "Missing 'content' parameter");
+            return;
+        }
+        
+        try {
+            logger.info("AI Action: " + action + " for chapter: " + chapterTitle);
+            
+            String result;
+            
+            if ("summary".equalsIgnoreCase(action)) {
+
+                result = ollamaService.generateChapterSummary(chapterTitle, chapterContent);
+                
+            } else if ("qa".equalsIgnoreCase(action)) {
+
+                result = ollamaService.generateStudyQuestions(chapterTitle, chapterContent);
+                
+            } else if ("concepts".equalsIgnoreCase(action)) {
+
+                result = ollamaService.extractKeyConcepts(chapterTitle, chapterContent);
+                
+            } else {
+                sendErrorResponse(response, "Unknown action '" + action + "'. Use 'summary', 'qa', or 'concepts'");
+                return;
+            }
+            
+            JsonObject jsonResponse = new JsonObject();
+            jsonResponse.addProperty("action", action);
+            jsonResponse.addProperty("title", chapterTitle);
+            jsonResponse.addProperty("result", result);
+            jsonResponse.addProperty("success", true);
+            
+            response.getWriter().write(gson.toJson(jsonResponse));
+            logger.info("AI response generated successfully");
+            
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            logger.log(Level.SEVERE, "Request interrupted", e);
+            sendErrorResponse(response, "Request interrupted: " + e.getMessage());
+            
+        } catch (IOException e) {
+            logger.log(Level.SEVERE, "IO error during AI processing", e);
+            sendErrorResponse(response, "Error communicating with AI service: " + e.getMessage());
+            
+        } catch (Exception e) {
+            logger.log(Level.SEVERE, "Unexpected error in AI servlet", e);
+            sendErrorResponse(response, "Unexpected error: " + e.getMessage());
+        }
+    }
+    
+    private void sendErrorResponse(HttpServletResponse response, String errorMessage) 
+            throws IOException {
+        JsonObject errorJson = new JsonObject();
+        errorJson.addProperty("success", false);
+        errorJson.addProperty("error", errorMessage);
+        response.getWriter().write(gson.toJson(errorJson));
     }
 }
