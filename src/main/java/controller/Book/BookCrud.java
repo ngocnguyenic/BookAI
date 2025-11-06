@@ -4,8 +4,7 @@ import dao.BookDAO;
 import dao.ChapterDAO;
 import model.Book;
 import model.Chapter;
-import service.PDFExtractor;
-import service.ChapterAIDetector;
+import service.SmartChapterExtractor;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.MultipartConfig;
@@ -29,12 +28,14 @@ public class BookCrud extends HttpServlet {
 
     private BookDAO bookDAO;
     private ChapterDAO chapterDAO;
+    private service.BookValidator bookValidator;
     private static final Logger logger = Logger.getLogger(BookCrud.class.getName());
 
     @Override
     public void init() throws ServletException {
         bookDAO = new BookDAO();
         chapterDAO = new ChapterDAO();
+        bookValidator = new service.BookValidator(bookDAO);
     }
 
     @Override
@@ -134,6 +135,7 @@ public class BookCrud extends HttpServlet {
                 return;
             }
 
+
             Book book = new Book(id, title, author, major, description);
             boolean success = bookDAO.updateBook(book);
 
@@ -156,151 +158,194 @@ public class BookCrud extends HttpServlet {
         }
 
         try {
-            int id = Integer.parseInt(idParam);
+            int bookId = Integer.parseInt(idParam);
             
-            chapterDAO.deleteChaptersByBookId(id);
-            boolean success = bookDAO.deleteBook(id);
+            logger.info("==========================================");
+            logger.info("DELETING BOOK ID: " + bookId);
+            logger.info("==========================================");
+            
+
+            List<Chapter> chapters = chapterDAO.getChaptersByBookId(bookId);
+            logger.info("Found " + chapters.size() + " chapters to delete");
+            
+
+         
+            
+            chapterDAO.deleteChaptersByBookId(bookId);
+            logger.info("✅ Deleted all chapters");
+            
+
+            boolean success = bookDAO.deleteBook(bookId);
 
             if (success) {
+                logger.info("✅✅✅ BOOK DELETED SUCCESSFULLY ✅✅✅");
                 response.sendRedirect("bookcrud?action=list&success=Xóa sách thành công!");
             } else {
                 response.sendRedirect("bookcrud?action=list&error=Xóa sách thất bại.");
             }
         } catch (NumberFormatException e) {
             response.sendRedirect("bookcrud?action=list&error=ID sách không hợp lệ.");
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Database error during book deletion", e);
+            response.sendRedirect("bookcrud?action=list&error=Lỗi database: " + e.getMessage());
         }
     }
+    
+    private void uploadBookWithPDF(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
 
-  private void uploadBookWithPDF(HttpServletRequest request, HttpServletResponse response)
-        throws ServletException, IOException {
+        Part filePart = request.getPart("pdfFile");
+        String title = request.getParameter("title");
+        String author = request.getParameter("author");
+        String major = request.getParameter("major");
+        String description = request.getParameter("description");
 
-    Part filePart = request.getPart("pdfFile");
-    String title = request.getParameter("title");
-    String author = request.getParameter("author");
-    String major = request.getParameter("major");
-    String description = request.getParameter("description");
-
-    // Validation
-    if (filePart == null || filePart.getSize() == 0) {
-        request.setAttribute("error", "Vui lòng chọn file PDF.");
-        request.getRequestDispatcher("book-upload.jsp").forward(request, response);
-        return;
-    }
-
-    if (isEmpty(title) || isEmpty(author)) {
-        request.setAttribute("error", "Vui lòng nhập tiêu đề và tác giả.");
-        request.getRequestDispatcher("book-upload.jsp").forward(request, response);
-        return;
-    }
-
-    // Setup upload directory
-    String uploadPath = getServletContext().getRealPath("/uploads");
-    File uploadDir = new File(uploadPath);
-    if (!uploadDir.exists()) uploadDir.mkdirs();
-
-    // Save file
-    String fileName = Paths.get(filePart.getSubmittedFileName()).getFileName().toString();
-    String safeFileName = System.currentTimeMillis() + "_" + fileName.replaceAll("[^a-zA-Z0-9\\.\\-]", "_");
-    String filePath = uploadPath + File.separator + safeFileName;
-    filePart.write(filePath);
-
-    try {
-        // Step 1: Extract text from PDF
-        logger.info("Step 1: Extracting text from PDF...");
-        String fullText = PDFExtractor.extractText(filePath);
-        if (isEmpty(fullText)) {
-            throw new Exception("Không thể trích xuất nội dung từ file PDF.");
+        if (filePart == null || filePart.getSize() == 0) {
+            request.setAttribute("error", "Vui lòng chọn file PDF.");
+            request.getRequestDispatcher("book-upload.jsp").forward(request, response);
+            return;
         }
-        logger.info("✅ Extracted " + fullText.length() + " characters");
 
-        // Step 2: Detect chapters using regex patterns
-        logger.info("Step 2: Detecting chapters with regex patterns...");
-        service.ChapterDetector detector = new service.ChapterDetector();
-        List<Chapter> chapters = detector.detectChapters(fullText);
-        
-        if (chapters == null || chapters.isEmpty()) {
-            throw new Exception("Không thể phát hiện chương.");
+        if (isEmpty(title) || isEmpty(author)) {
+            request.setAttribute("error", "Vui lòng nhập tiêu đề và tác giả.");
+            request.getRequestDispatcher("book-upload.jsp").forward(request, response);
+            return;
         }
-        logger.info("✅ Detected " + chapters.size() + " chapters");
 
-        // Step 3: Save book to database
-        logger.info("Step 3: Saving book to database...");
-        Book book = new Book(title, author, major, description);
-        book.setFilePath("/uploads/" + safeFileName);
-        int bookId = bookDAO.insertBook(book);
+        String uploadPath = config.FileUploadConfig.getUploadPath();
+        File uploadDir = config.FileUploadConfig.getUploadDir();
         
-        if (bookId <= 0) {
-            throw new Exception("Không thể lưu sách vào database.");
-        }
-        logger.info("✅ Book saved with ID: " + bookId);
+        logger.info("==========================================");
+        logger.info("UPLOAD CONFIGURATION");
+        logger.info("==========================================");
+        logger.info("Upload directory: " + uploadPath);
+        logger.info("Directory exists: " + uploadDir.exists());
+        logger.info("Directory writable: " + uploadDir.canWrite());
 
-        // Step 4: Generate summaries with Ollama
-        logger.info("Step 4: Generating summaries with Ollama...");
-        service.OllamaService ollamaService = new service.OllamaService();
+        String fileName = Paths.get(filePart.getSubmittedFileName()).getFileName().toString();
+        String safeFileName = System.currentTimeMillis() + "_" + fileName.replaceAll("[^a-zA-Z0-9\\.\\-]", "_");
+        String filePath = uploadPath + File.separator + safeFileName;
         
-        if (!ollamaService.isServerHealthy()) {
-            logger.warning("⚠️ Ollama Flask API not running!");
-            logger.warning("   Chapters will be saved without AI summaries.");
-            logger.warning("   To enable summaries: python app.py (port 5001)");
-            
-            for (Chapter chapter : chapters) {
-                chapter.setBookID(bookId);
-                chapter.setSummary("Chương " + chapter.getChapterNumber() + ": " + chapter.getTitle());
-            }
-        } else {
-            logger.info("✅ Ollama Flask API is running, generating summaries...");
-            int successCount = 0;
-            
-            for (Chapter chapter : chapters) {
-                chapter.setBookID(bookId);
-                
-                try {
-                    String contentSample = chapter.getContent().substring(0, 
-                        Math.min(3000, chapter.getContent().length()));
-                    
-                    String summary = ollamaService.generateChapterSummary(
-                        chapter.getTitle(), contentSample);
-                    
-                    chapter.setSummary(summary);
-                    successCount++;
-                    
-                    logger.info("  ✓ Chapter " + chapter.getChapterNumber() + " summarized");
-                    
-                } catch (Exception e) {
-                    logger.warning("⚠️ Summary failed for chapter " + chapter.getChapterNumber() + 
-                                 ": " + e.getMessage());
-                    chapter.setSummary("Chương " + chapter.getChapterNumber() + ": " + chapter.getTitle());
-                }
-            }
-            
-            logger.info("✅ Generated " + successCount + "/" + chapters.size() + " summaries");
+        logger.info("Target file path: " + filePath);
+        
+        filePart.write(filePath);
+        
+        File savedFile = new File(filePath);
+        if (!savedFile.exists()) {
+            logger.severe("❌ File was not saved successfully!");
+            request.setAttribute("error", "Không thể lưu file PDF.");
+            request.getRequestDispatcher("book-upload.jsp").forward(request, response);
+            return;
         }
         
-        // Save chapters to database
-        chapterDAO.insertChaptersBatch(chapters);
-        logger.info("✅ Chapters saved to database");
+        logger.info("✅ File saved successfully: " + savedFile.length() + " bytes");
+        logger.info("   Absolute path: " + savedFile.getAbsolutePath());
+        
 
-        // Step 5: Index chapters to FAISS
-        logger.info("Step 5: Indexing chapters to FAISS...");
+        SmartChapterExtractor.ExtractionResult extractionResult = null;
+        int bookId = -1;
+        List<Chapter> chapters = null;
+        
         try {
+
+            logger.info("==========================================");
+            logger.info("STEP 1: SMART CHAPTER EXTRACTION");
+            logger.info("==========================================");
+            
+            SmartChapterExtractor extractor = new SmartChapterExtractor();
+            extractionResult = extractor.extractChapters(filePath);
+            
+            if (!extractionResult.success || extractionResult.chapters.isEmpty()) {
+                throw new Exception("Extraction failed: " + 
+                    (extractionResult.error != null ? extractionResult.error : "No chapters detected"));
+            }
+            
+            chapters = extractionResult.chapters;
+            logger.info("✅ Extraction method: " + extractionResult.method);
+            logger.info("✅ Total chapters detected: " + chapters.size());
+
+        } catch (Exception e) {
+            logger.log(Level.SEVERE, "❌ STEP 1 FAILED: Chapter extraction", e);
+            savedFile.delete();
+            logger.info("Deleted file due to extraction failure");
+            request.setAttribute("error", "Không thể phát hiện chương trong PDF: " + e.getMessage());
+            request.getRequestDispatcher("book-upload.jsp").forward(request, response);
+            return;
+        }
+        
+        try {
+            logger.info("==========================================");
+            logger.info("STEP 2: SAVING BOOK TO DATABASE");
+            logger.info("==========================================");
+            
+ 
+            Book book = new Book(title, author, major, description);
+            book.setFilePath("/viewpdf?file=" + safeFileName);
+            
+            logger.info("Book object created: " + book.toString());
+            
+            bookId = bookDAO.insertBook(book);
+            
+            if (bookId <= 0) {
+                throw new SQLException("BookDAO.insertBook returned invalid ID: " + bookId);
+            }
+            logger.info("✅ Book saved with ID: " + bookId);
+
+        } catch (Exception e) {
+            logger.log(Level.SEVERE, "❌ STEP 2 FAILED: Database insert", e);
+            savedFile.delete();
+            logger.info("Deleted file due to database failure");
+            request.setAttribute("error", "Không thể lưu thông tin sách vào database: " + e.getMessage());
+            request.getRequestDispatcher("book-upload.jsp").forward(request, response);
+            return;
+        }
+        
+        try {
+            logger.info("==========================================");
+            logger.info("STEP 3: SAVING CHAPTERS");
+            logger.info("==========================================");
+            
+            for (Chapter chapter : chapters) {
+                chapter.setBookID(bookId);
+                chapter.setSummary(null);
+            }
+            
+            chapterDAO.insertChaptersBatch(chapters);
+            logger.info("✅ Saved " + chapters.size() + " chapters");
+
+        } catch (Exception e) {
+            logger.log(Level.SEVERE, "❌ STEP 3 FAILED: Chapter save", e);
+            try {
+                bookDAO.deleteBook(bookId);
+                logger.info("Rolled back book ID: " + bookId);
+                savedFile.delete();
+                logger.info("Deleted file after rollback");
+            } catch (Exception rollbackError) {
+                logger.log(Level.SEVERE, "Rollback failed!", rollbackError);
+            }
+            request.setAttribute("error", "Không thể lưu chapters: " + e.getMessage());
+            request.getRequestDispatcher("book-upload.jsp").forward(request, response);
+            return;
+        }
+        try {
+            logger.info("==========================================");
+            logger.info("STEP 4: INDEXING TO FAISS (OPTIONAL)");
+            logger.info("==========================================");
+            
             service.FAISSService faissService = new service.FAISSService();
             service.LocalEmbeddingService embeddingService = new service.LocalEmbeddingService();
             
             if (!embeddingService.isHealthy()) {
-                logger.warning("⚠️ Embedding service not available (port 5001)");
-                logger.warning("   FAISS indexing skipped.");
-                logger.warning("   To enable: python app.py with /embed endpoint");
+                logger.warning(" Embedding service not available - skipping FAISS");
             } else {
-                logger.info("✅ Embedding service available, indexing...");
+                logger.info("Embedding service available");
                 
                 List<Chapter> savedChapters = chapterDAO.getChaptersByBookId(bookId);
                 
-                // Create index if not exists
                 try {
                     faissService.createIndex(384);
-                    logger.info("  Created new FAISS index with 384 dimensions");
                 } catch (Exception e) {
-                    logger.info("  FAISS index already exists or create failed, continuing...");
+                    logger.info("FAISS index already exists");
                 }
                 
                 List<Integer> chapterIds = new ArrayList<>();
@@ -308,58 +353,46 @@ public class BookCrud extends HttpServlet {
                 
                 for (Chapter chapter : savedChapters) {
                     try {
-                        // Embed: title + summary + content sample
                         String textToEmbed = chapter.getTitle() + ". " + 
-                            (chapter.getSummary() != null ? chapter.getSummary() + ". " : "") +
                             chapter.getContent().substring(0, Math.min(1000, chapter.getContent().length()));
                         
                         float[] embedding = embeddingService.generateEmbedding(textToEmbed);
-                        
                         chapterIds.add(chapter.getChapterID());
                         embeddings.add(embedding);
                         
-                        logger.info("  ✓ Embedded chapter " + chapter.getChapterNumber());
-                        
                     } catch (Exception e) {
-                        logger.warning("  ✗ Embedding failed for chapter " + chapter.getChapterNumber() + 
-                                     ": " + e.getMessage());
+                        logger.warning("Embedding failed for chapter " + chapter.getChapterNumber());
                     }
                 }
                 
                 if (!chapterIds.isEmpty()) {
                     faissService.addVectors(chapterIds, embeddings);
                     faissService.saveIndex();
-                    logger.info("✅ Indexed " + chapterIds.size() + " chapters to FAISS");
-                } else {
-                    logger.warning("⚠️ No chapters were embedded");
+                    logger.info("✅ Indexed " + chapterIds.size() + " chapters");
                 }
             }
             
         } catch (Exception e) {
-            logger.log(Level.WARNING, "FAISS indexing failed (non-critical): " + e.getMessage(), e);
-            logger.warning("   Book and chapters were saved successfully.");
-            logger.warning("   Only FAISS indexing failed - RAG features may not work.");
+            logger.log(Level.WARNING, "⚠️ FAISS indexing failed (non-critical): " + e.getMessage());
         }
 
-        // Success message
-        String message = "✅ Upload thành công! " + chapters.size() + " chương đã được xử lý.";
+        // ✅ SUCCESS!
+        logger.info("==========================================");
+        logger.info("✅✅✅ UPLOAD SUCCESSFUL ✅✅✅");
+        logger.info("==========================================");
+        logger.info("Book ID: " + bookId);
+        logger.info("File: " + safeFileName);
+        logger.info("Chapters: " + chapters.size());
+        logger.info("==========================================");
+        
+        String message = String.format(
+            "✅ Upload thành công! Sách '%s' với %d chương đã được lưu (ID: %d)",
+            title, chapters.size(), bookId
+        );
+        
         request.getSession().setAttribute("successMessage", message);
         response.sendRedirect("bookcrud?action=list");
-
-    } catch (Exception e) {
-        logger.log(Level.SEVERE, "Error processing PDF upload", e);
-        
-        // Delete uploaded file on error
-        File uploadedFile = new File(filePath);
-        if (uploadedFile.exists()) {
-            uploadedFile.delete();
-            logger.info("Deleted failed upload: " + safeFileName);
-        }
-        
-        request.setAttribute("error", "Lỗi xử lý file: " + e.getMessage());
-        request.getRequestDispatcher("book-upload.jsp").forward(request, response);
     }
-}
 
     // ========================= UTILITY =========================
 
