@@ -14,17 +14,22 @@ public class ChapterDetector {
     
     // Multiple patterns với độ ưu tiên giảm dần
     private static final String[] CHAPTER_PATTERNS = {
-        // Vietnamese
-        "(?m)^\\s*(Chương|CHƯƠNG)\\s+([\\dIVX]+)\\s*[:\\-–—]?\\s*(.{0,100})$",
-        "(?m)^\\s*(Bài|BÀI)\\s+([\\dIVX]+)\\s*[:\\-–—]?\\s*(.{0,100})$",
-        "(?m)^\\s*(PHẦN|Phần)\\s+([\\dIVX]+)\\s*[:\\-–—]?\\s*(.{0,100})$",
+        // Pattern 1: "Chapter X" followed by title on SAME line
+        // Example: "Chapter 1 Java Primer" or "Chapter 1: Java Primer"
+        "(?m)^\\s*(Chapter|CHAPTER)\\s+(\\d+|[IVX]+)\\s*[:\\-–—]?\\s+([A-Z][A-Za-z\\s]{5,80})\\s*$",
         
-        // English
-        "(?m)^\\s*(Chapter|CHAPTER)\\s+([\\dIVX]+)\\s*[:\\-–—]?\\s*(.{0,100})$",
-        "(?m)^\\s*(Section|SECTION)\\s+([\\dIVX]+)\\s*[:\\-–—]?\\s*(.{0,100})$",
+        // Pattern 2: Vietnamese "Chương X: Title"
+        "(?m)^\\s*(Chương|CHƯƠNG)\\s+(\\d+|[IVX]+)\\s*[:\\-–—]?\\s+([A-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪỬỮỰỲỴỶỸ][\\w\\s]{5,80})\\s*$",
         
-        // Numbered only: "1. Something" or "1 Something"
-        "(?m)^\\s*(\\d+)\\s*[\\.\\)]\\s+([A-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪỬỮỰỲỴỶỸ].{3,80})$"
+        // Pattern 3: "Section X: Title"
+        "(?m)^\\s*(Section|SECTION|Bài|BÀI)\\s+(\\d+|[IVX]+)\\s*[:\\-–—]?\\s+([A-Z][A-Za-z\\s]{5,80})\\s*$",
+        
+        // Pattern 4: Numbered with clear title (more strict)
+        // Must start with capital, at least 2 words, and reasonable length
+        "(?m)^\\s*(\\d+)\\s*[\\.\\)]\\s+([A-Z][A-Za-z]+(?:\\s+[A-Z][A-Za-z]+){1,8})\\s*$",
+        
+        // Pattern 5: All caps title (for books with all-caps chapter headings)
+        "(?m)^\\s*([A-Z\\s]{10,60})\\s*$"
     };
     
     public List<Chapter> detectChapters(String fullText) {
@@ -76,35 +81,98 @@ public class ChapterDetector {
             
             String content = fullText.substring(start, end).trim();
             
-            // Skip chapters quá ngắn (< 300 chars)
-            if (content.length() < 30) {
+            // Skip chapters quá ngắn (< 1000 chars for better quality)
+            if (content.length() < 1000) {
                 logger.warning("Skipping chapter " + (i + 1) + " - too short (" + content.length() + " chars)");
                 continue;
             }
             
             // Extract title
-            String title = match.group().trim();
-            if (match.groupCount() >= 3 && match.group(3) != null && !match.group(3).trim().isEmpty()) {
-                title = match.group(3).trim();
+            String title = extractTitle(match);
+            
+            // Validate title quality
+            if (!isValidTitle(title)) {
+                logger.warning("Skipping chapter " + (i + 1) + " - invalid title: '" + title + "'");
+                continue;
             }
             
             Chapter chap = new Chapter();
-            chap.setChapterNumber(i + 1);
+            chap.setChapterNumber(chapters.size() + 1);
             chap.setTitle(cleanTitle(title));
             chap.setContent(content);
             
             chapters.add(chap);
             
-            logger.info("  Chapter " + (i + 1) + ": " + chap.getTitle() + 
+            logger.info("  Chapter " + chap.getChapterNumber() + ": " + chap.getTitle() + 
                        " (" + content.length() + " chars)");
         }
         
         return chapters;
     }
     
+    /**
+     * Extract title from match, handling different pattern structures
+     */
+    private String extractTitle(MatchResult match) {
+        String title = match.group().trim();
+        
+        // If we have captured groups, try to get the title part
+        if (match.groupCount() >= 2) {
+            // Last group is usually the title
+            String lastGroup = match.group(match.groupCount());
+            if (lastGroup != null && !lastGroup.trim().isEmpty()) {
+                return lastGroup.trim();
+            }
+        }
+        
+        return title;
+    }
+    
+    /**
+     * Validate if extracted title is meaningful
+     */
+    private boolean isValidTitle(String title) {
+        if (title == null || title.trim().isEmpty()) {
+            return false;
+        }
+        
+        title = title.trim();
+        
+        // Reject if too short
+        if (title.length() < 5) {
+            return false;
+        }
+        
+        // Reject if only punctuation/numbers
+        if (title.matches("^[\\d\\s\\.,:;\\-–—]+$")) {
+            return false;
+        }
+        
+        // Reject if starts with lowercase or punctuation
+        if (title.matches("^[a-z\\.,;:].*")) {
+            return false;
+        }
+        
+        // Must have at least 2 alphabetic characters
+        int alphaCount = 0;
+        for (char c : title.toCharArray()) {
+            if (Character.isLetter(c)) {
+                alphaCount++;
+            }
+        }
+        if (alphaCount < 2) {
+            return false;
+        }
+        
+        return true;
+    }
+    
     private String cleanTitle(String title) {
         // Remove leading chapter markers
         title = title.replaceAll("^(Chương|CHƯƠNG|Bài|BÀI|PHẦN|Phần|Chapter|CHAPTER|Section|SECTION)\\s+[\\dIVX]+\\s*[:\\-–—]?\\s*", "");
+        
+        // Remove leading/trailing punctuation
+        title = title.replaceAll("^[\\s\\.,;:\\-–—]+|[\\s\\.,;:\\-–—]+$", "");
         
         // Trim and limit length
         title = title.trim();
@@ -112,8 +180,8 @@ public class ChapterDetector {
             title = title.substring(0, 100) + "...";
         }
         
-        // If empty, return default
-        if (title.isEmpty()) {
+        // If empty after cleaning, return default
+        if (title.isEmpty() || !isValidTitle(title)) {
             title = "Untitled Chapter";
         }
         
