@@ -9,6 +9,7 @@ E:\lab211_coTrang\BookAI\src\main\java\service\PDFTableOfContentsExtractor.java
 E:\lab211_coTrang\BookAI\src\main\java\dao\AdaptiveLearningDAO.java
 E:\lab211_coTrang\BookAI\src\main\java\com\mycompany\bookai\resources\JakartaEE10Resource.java
 E:\lab211_coTrang\BookAI\src\main\java\config\ConfigAPIKey.java
+E:\lab211_coTrang\BookAI\src\main\java\controller\learning\LearningHistoryServlet.java
 E:\lab211_coTrang\BookAI\src\main\java\controller\learning\SubmitMCQBatchServlet.java
 E:\lab211_coTrang\BookAI\src\main\java\controller\AI\RAGChatServlet.java
 E:\lab211_coTrang\BookAI\src\main\java\controller\Book\BookCrud.java

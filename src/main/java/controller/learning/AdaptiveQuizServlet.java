@@ -37,7 +37,6 @@ public class AdaptiveQuizServlet extends HttpServlet {
         Map<String, Object> result = new HashMap<>();
         
         try {
-            // Get user from session
             HttpSession session = request.getSession(false);
             Integer userID = (session != null) ? (Integer) session.getAttribute("userID") : 1;
             
@@ -51,16 +50,11 @@ public class AdaptiveQuizServlet extends HttpServlet {
             
             int chapterID = Integer.parseInt(chapterIdStr);
             
-            logger.info("Getting adaptive question for user " + userID + ", chapter " + chapterID);
-            
-            // Get mastery info
+            logger.info("Getting adaptive question for user " + userID + ", chapter " + chapterID);            
             UserChapterMastery mastery = adaptiveDAO.getMasteryScore(userID, chapterID);
             double masteryScore = (mastery != null) ? mastery.getMasteryScore() : 0.0;
-            
-            // Get user ability (theta)
-            double theta = irtService.estimateUserAbility(userID, chapterID);
-            
-            // Select optimal question using IRT
+             
+            double theta = irtService.estimateUserAbility(userID, chapterID);            
             QA question = irtService.selectOptimalQuestion(userID, chapterID);
             
             if (question == null) {
@@ -69,8 +63,6 @@ public class AdaptiveQuizServlet extends HttpServlet {
                 response.getWriter().write(gson.toJson(result));
                 return;
             }
-            
-            // Calculate predicted probability
             double beta = irtService.estimateItemDifficulty(question.getDifficulty());
             double predictedProb = irtService.calculateProbability(theta, beta);
             

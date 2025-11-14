@@ -39,6 +39,7 @@ config\FileUploadConfig.class
 controller\learning\SubmitMCQBatchServlet.class
 service\PDFTableOfContentsExtractor$TOCEntry.class
 service\OllamaService$QATaggingResult.class
+controller\learning\LearningHistoryServlet.class
 service\TaggingService.class
 service\BookValidator$ValidationResult.class
 dao\AdaptiveLearningDAO.class

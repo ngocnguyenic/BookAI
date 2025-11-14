@@ -1,0 +1,4 @@
+﻿Test Name,Status,Execution Time (ms),Notes,Error,Timestamp
+Generate Summary,PASSED,10328,"Length: 485 chars","",2025-11-13T08:40:10.9646323
+Generate MCQ,FAILED,17321,"","MCQ generation failed after 2 attempts: Invalid JSON from Ollama: Expected a ',' or ']' at 1258 [character 5 line 17]. Try regenerating or check Ollama output quality.",2025-11-13T08:40:28.294401
+Evaluate Answer,PASSED,2824,"Score: 75.0, Level: good","",2025-11-13T08:40:31.1326819

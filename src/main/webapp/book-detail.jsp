@@ -326,6 +326,212 @@
         .fade-in {
             animation: fadeIn 0.5s ease;
         }
+        
+        /* LỊCH SỬ CSS */
+        .history-badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            background: #fef3c7;
+            color: #92400e;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .history-badge:hover {
+            background: #fde68a;
+            transform: translateY(-1px);
+        }
+        .history-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 10000;
+            animation: fadeIn 0.3s;
+        }
+        .history-modal-content {
+            position: relative;
+            background: white;
+            width: 90%;
+            max-width: 800px;
+            margin: 50px auto;
+            border-radius: 12px;
+            max-height: 85vh;
+            overflow-y: auto;
+            animation: slideDown 0.3s;
+        }
+        @keyframes slideDown {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        .history-header {
+            padding: 25px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px 12px 0 0;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .history-close {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            font-size: 1.5rem;
+            color: white;
+            cursor: pointer;
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background 0.3s;
+        }
+        .history-close:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        .history-body {
+            padding: 25px;
+        }
+        .history-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .stat-card {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #e2e8f0;
+        }
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        .stat-label {
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+        .history-timeline {
+            position: relative;
+            padding-left: 30px;
+        }
+        .history-timeline::before {
+            content: '';
+            position: absolute;
+            left: 8px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #e2e8f0;
+        }
+        .timeline-item {
+            position: relative;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        .timeline-item:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            border-color: #cbd5e1;
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -26px;
+            top: 20px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #667eea;
+            border: 3px solid white;
+            box-shadow: 0 0 0 2px #e2e8f0;
+        }
+        .timeline-question {
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+        }
+        .timeline-meta {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            font-size: 0.85rem;
+            color: #64748b;
+            margin-bottom: 10px;
+        }
+        .timeline-meta span {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .difficulty-badge {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        .difficulty-easy { background: #d1fae5; color: #065f46; }
+        .difficulty-medium { background: #fef3c7; color: #92400e; }
+        .difficulty-hard { background: #fee2e2; color: #991b1b; }
+        .result-badge {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        .result-correct { background: #dcfce7; color: #166534; }
+        .result-incorrect { background: #fee2e2; color: #991b1b; }
+        .ai-feedback-item {
+            margin-top: 10px;
+            padding: 12px;
+            background: #f0f9ff;
+            border-left: 3px solid #3b82f6;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            color: #1e40af;
+        }
+        .empty-history {
+            text-align: center;
+            padding: 60px 20px;
+            color: #94a3b8;
+        }
+        .empty-history i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+        .loading-spinner {
+            text-align: center;
+            padding: 40px;
+            color: #667eea;
+        }
+        .loading-spinner i {
+            font-size: 3rem;
+            animation: spin 1s linear infinite;
+        }
     </style>
 </head>
 <body>
@@ -359,18 +565,26 @@
                 <h3 class="chapter-title"><%= chap.getTitle() %></h3>
             </div>
             
-            <% if (!hasSummary) { %>
-                <button class="btn-generate" 
-                        onclick="generateSummary(<%= chap.getChapterID() %>, this)"
-                        data-chapter-id="<%= chap.getChapterID() %>">
-                    <i class="fas fa-play"></i>
-                    <span class="btn-text">Tạo tóm tắt</span>
-                </button>
-            <% } else { %>
-                <span class="status-badge badge-has-summary">
-                    <i class="fas fa-check-circle"></i> Đã có tóm tắt
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <!-- NÚT XEM LỊCH SỬ -->
+                <span class="history-badge" onclick="showChapterHistory(<%= chap.getChapterID() %>, '<%= chap.getTitle().replace("'", "\\'") %>')">
+                    <i class="fas fa-history"></i>
+                    <span>Lịch sử</span>
                 </span>
-            <% } %>
+                
+                <% if (!hasSummary) { %>
+                    <button class="btn-generate" 
+                            onclick="generateSummary(<%= chap.getChapterID() %>, this)"
+                            data-chapter-id="<%= chap.getChapterID() %>">
+                        <i class="fas fa-play"></i>
+                        <span class="btn-text">Tạo tóm tắt</span>
+                    </button>
+                <% } else { %>
+                    <span class="status-badge badge-has-summary">
+                        <i class="fas fa-check-circle"></i> Đã có tóm tắt
+                    </span>
+                <% } %>
+            </div>
         </div>
         
         <div class="summary-section">
@@ -415,6 +629,26 @@
     <%
         }
     %>
+</div>
+
+<!-- MODAL LỊCH SỬ -->
+<div id="historyModal" class="history-modal" onclick="closeHistoryModal(event)">
+    <div class="history-modal-content" onclick="event.stopPropagation()">
+        <div class="history-header">
+            <h3 style="margin: 0; color: white;">
+                <i class="fas fa-history"></i>
+                <span id="historyChapterTitle">Lịch sử làm bài</span>
+            </h3>
+            <span class="history-close" onclick="closeHistoryModal()">&times;</span>
+        </div>
+        
+        <div class="history-body" id="historyContent">
+            <div class="loading-spinner">
+                <i class="fas fa-spinner"></i>
+                <p>Đang tải lịch sử...</p>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -478,7 +712,7 @@ function generateQA(chapterId, button) {
     button.innerHTML = '<div class="spinner"></div> <span class="btn-text">Đang tạo...</span>';
     
     $.ajax({
-        url: 'api/chapter/generate-qa',
+        url: 'generate-qa',
         method: 'POST',
         data: { chapterId: chapterId, numQuestions: 5 },
         dataType: 'json',
@@ -678,7 +912,6 @@ function displayResults(chapterId, evaluations, masteryScore, userTheta, hasAchi
     resultHtml += level.analysis;
     resultHtml += '</div>';
     
-    // GỢI Ý CÂU HỎI TIẾP THEO DỰA TRÊN IRT
     resultHtml += getNextQuestionRecommendation(masteryScore, userTheta, hasAchievedMastery, chapterId);
     
     resultHtml += '</div>';
@@ -705,7 +938,6 @@ function getNextQuestionRecommendation(masteryScore, userTheta, hasAchievedMaste
     }
     
     if (hasAchievedMastery) {
-        // Đã thành thạo - Gợi ý câu hỏi khó hơn
         html += '<p style="margin-bottom: 10px; opacity: 0.95;">Xuất sắc! Bạn đã thành thạo chương này. Hãy thử thách bản thân với:</p>';
         html += '<div>';
         html += '<span class="recommendation-badge"><i class="fas fa-brain"></i> Câu hỏi phân tích sâu</span>';
@@ -715,7 +947,6 @@ function getNextQuestionRecommendation(masteryScore, userTheta, hasAchievedMaste
         html += '<button class="btn-next-quiz" onclick="generateAdvancedQuiz(' + chapterId + ', \'hard\')"><i class="fas fa-fire"></i> Tạo câu hỏi nâng cao</button>';
         
     } else if (masteryScore >= 70) {
-        // Tốt - Gợi ý câu hỏi củng cố
         html += '<p style="margin-bottom: 10px; opacity: 0.95;">Bạn đang học rất tốt! Tiếp tục củng cố với:</p>';
         html += '<div>';
         html += '<span class="recommendation-badge"><i class="fas fa-sync"></i> Ôn tập khái niệm</span>';
@@ -725,7 +956,6 @@ function getNextQuestionRecommendation(masteryScore, userTheta, hasAchievedMaste
         html += '<button class="btn-next-quiz" onclick="generateAdvancedQuiz(' + chapterId + ', \'medium\')"><i class="fas fa-layer-group"></i> Tạo câu hỏi nâng cao hơn</button>';
         
     } else if (masteryScore >= 50) {
-        // Khá - Gợi ý ôn lại và luyện tập
         html += '<p style="margin-bottom: 10px; opacity: 0.95;">Bạn đã nắm được cơ bản. Hãy luyện tập thêm với:</p>';
         html += '<div>';
         html += '<span class="recommendation-badge"><i class="fas fa-repeat"></i> Ôn lại kiến thức</span>';
@@ -735,7 +965,6 @@ function getNextQuestionRecommendation(masteryScore, userTheta, hasAchievedMaste
         html += '<button class="btn-next-quiz" onclick="generateAdvancedQuiz(' + chapterId + ', \'easy\')"><i class="fas fa-redo"></i> Làm lại với câu tương tự</button>';
         
     } else {
-        // Cần cải thiện - Gợi ý học lại
         html += '<p style="margin-bottom: 10px; opacity: 0.95;">Đừng nản lòng! Hãy bắt đầu lại từ những điều cơ bản:</p>';
         html += '<div>';
         html += '<span class="recommendation-badge"><i class="fas fa-book"></i> Đọc lại tóm tắt</span>';
@@ -752,11 +981,10 @@ function getNextQuestionRecommendation(masteryScore, userTheta, hasAchievedMaste
 function generateAdvancedQuiz(chapterId, targetDifficulty) {
     showNotification('info', 'Đang tạo bộ câu hỏi ' + getDifficultyLabel(targetDifficulty) + '...');
     
-    // Tạo số câu hỏi dựa trên difficulty
     var numQuestions = targetDifficulty === 'hard' ? 3 : 5;
     
     $.ajax({
-        url: 'api/chapter/generate-qa',
+        url: 'generate-qa',
         method: 'POST',
         data: { 
             chapterId: chapterId, 
@@ -766,13 +994,9 @@ function generateAdvancedQuiz(chapterId, targetDifficulty) {
         dataType: 'json',
         success: function(response) {
             if (response.success) {
-                // Xóa bộ câu hỏi cũ
                 $('#mcq-container-' + chapterId).remove();
-                
-                // Hiển thị bộ mới
                 displayMCQs(chapterId, response.qas);
                 
-                // Scroll to new quiz
                 $('html, body').animate({
                     scrollTop: $('#mcq-container-' + chapterId).offset().top - 100
                 }, 500);
@@ -855,6 +1079,173 @@ function showNotification(type, message) {
         });
     }, 5000);
 }
+
+// ========== HÀM LỊCH SỬ ==========
+
+function showChapterHistory(chapterId, chapterTitle) {
+    $('#historyChapterTitle').text('Lịch sử làm bài - ' + chapterTitle);
+    $('#historyModal').fadeIn(300);
+    $('#historyContent').html('<div class="loading-spinner"><i class="fas fa-spinner"></i><p>Đang tải lịch sử...</p></div>');
+    
+    $.ajax({
+        url: 'learninghistory',
+        method: 'GET',
+        data: { 
+            action: 'getChapterHistory',
+            chapterId: chapterId 
+        },
+        dataType: 'json',
+        success: function(response) {
+            if (response.success) {
+                displayChapterHistory(response.data);
+            } else {
+                $('#historyContent').html(
+                    '<div class="empty-history">' +
+                    '<i class="fas fa-exclamation-circle"></i>' +
+                    '<p>' + (response.error || 'Không thể tải lịch sử') + '</p>' +
+                    '</div>'
+                );
+            }
+        },
+        error: function(xhr, status, error) {
+            $('#historyContent').html(
+                '<div class="empty-history">' +
+                '<i class="fas fa-exclamation-circle"></i>' +
+                '<p>Lỗi kết nối: ' + error + '</p>' +
+                '</div>'
+            );
+        }
+    });
+}
+
+function displayChapterHistory(data) {
+    var mastery = data.mastery;
+    var attempts = data.attempts || [];
+    
+    if (!mastery && attempts.length === 0) {
+        $('#historyContent').html(
+            '<div class="empty-history">' +
+            '<i class="fas fa-inbox"></i>' +
+            '<p>Bạn chưa làm bài tập nào cho chương này</p>' +
+            '</div>'
+        );
+        return;
+    }
+    
+    var html = '';
+    
+    if (mastery) {
+        var accuracy = mastery.totalQuestions > 0 ? 
+            Math.round((mastery.correctAnswers / mastery.totalQuestions) * 100) : 0;
+        
+        html += '<div class="history-stats">';
+        html += '<div class="stat-card">';
+        html += '<div class="stat-value">' + mastery.totalQuestions + '</div>';
+        html += '<div class="stat-label">Tổng câu hỏi</div>';
+        html += '</div>';
+        
+        html += '<div class="stat-card">';
+        html += '<div class="stat-value">' + accuracy + '%</div>';
+        html += '<div class="stat-label">Tỷ lệ đúng</div>';
+        html += '</div>';
+        
+        html += '<div class="stat-card">';
+        html += '<div class="stat-value">' + Math.round(mastery.masteryScore) + '%</div>';
+        html += '<div class="stat-label">Độ thành thạo</div>';
+        html += '</div>';
+        html += '</div>';
+    }
+    
+    if (attempts.length > 0) {
+        html += '<h5 style="margin-bottom: 15px; color: #1e293b;"><i class="fas fa-clock"></i> Lịch sử trả lời</h5>';
+        html += '<div class="history-timeline">';
+        
+        for (var i = 0; i < attempts.length; i++) {
+            var attempt = attempts[i];
+            var questionText = attempt.question;
+            if (questionText && questionText.length > 100) {
+                questionText = questionText.substring(0, 100) + '...';
+            }
+            
+            var difficultyClass = 'difficulty-' + (attempt.difficulty || 'medium');
+            var resultClass = attempt.isCorrect ? 'result-correct' : 'result-incorrect';
+            var resultIcon = attempt.isCorrect ? 'fa-check-circle' : 'fa-times-circle';
+            var resultText = attempt.isCorrect ? 'Đúng' : 'Sai';
+            
+            html += '<div class="timeline-item">';
+            html += '<div class="timeline-question">' + escapeHtml(questionText) + '</div>';
+            
+            html += '<div class="timeline-meta">';
+            html += '<span class="difficulty-badge ' + difficultyClass + '">' + 
+                    '<i class="fas fa-layer-group"></i> ' + (attempt.difficulty || 'medium') + '</span>';
+            html += '<span class="result-badge ' + resultClass + '">' +
+                    '<i class="fas ' + resultIcon + '"></i> ' + resultText + '</span>';
+            
+            if (attempt.timeSpent) {
+                html += '<span><i class="fas fa-clock"></i> ' + attempt.timeSpent + 's</span>';
+            }
+            
+            if (attempt.attemptedAt) {
+                var date = new Date(attempt.attemptedAt);
+                var timeStr = formatDate(date);
+                html += '<span><i class="fas fa-calendar"></i> ' + timeStr + '</span>';
+            }
+            html += '</div>';
+            
+            if (attempt.aiScore || attempt.aiFeedback) {
+                html += '<div class="ai-feedback-item">';
+                if (attempt.aiScore) {
+                    html += '<strong><i class="fas fa-robot"></i> Điểm AI: ' + 
+                            Math.round(attempt.aiScore) + '/100</strong>';
+                }
+                if (attempt.aiFeedback) {
+                    html += '<p style="margin-top: 5px; margin-bottom: 0;">' + 
+                            escapeHtml(attempt.aiFeedback) + '</p>';
+                }
+                html += '</div>';
+            }
+            
+            html += '</div>';
+        }
+        
+        html += '</div>';
+    }
+    
+    $('#historyContent').html(html);
+}
+
+function closeHistoryModal(event) {
+    if (!event || event.target.id === 'historyModal') {
+        $('#historyModal').fadeOut(300);
+    }
+}
+
+function formatDate(date) {
+    var now = new Date();
+    var diff = now - date;
+    var seconds = Math.floor(diff / 1000);
+    var minutes = Math.floor(seconds / 60);
+    var hours = Math.floor(minutes / 60);
+    var days = Math.floor(hours / 24);
+    
+    if (days > 7) {
+        return date.toLocaleDateString('vi-VN');
+    } else if (days > 0) {
+        return days + ' ngày trước';
+    } else if (hours > 0) {
+        return hours + ' giờ trước';
+    } else if (minutes > 0) {
+        return minutes + ' phút trước';
+    } else {
+        return 'Vừa xong';
+    }
+}
+
+$(document).keydown(function(e) {
+    if (e.key === "Escape") {
+        closeHistoryModal();
+    }
+});
 </script>
 
 </body>
