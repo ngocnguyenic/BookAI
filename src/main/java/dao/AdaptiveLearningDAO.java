@@ -6,7 +6,9 @@ import model.UserChapterMastery;
 import model.QA;
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
 import service.IRTService;
 
@@ -217,9 +219,6 @@ private void updateMasteryScoreWithAI(int userID, int chapterID) throws SQLExcep
         }
     }
     
-    
-    // Thêm vào AdaptiveLearningDAO.java
-
 public QA getAdaptiveQuestionWithIRT(int userID, int chapterID) throws SQLException {
     IRTService irtService = new IRTService();
     
@@ -271,4 +270,86 @@ public QA getAdaptiveQuestionWithIRT(int userID, int chapterID) throws SQLExcept
         
         return history;
     }
+ public List<UserChapterMastery> getUserLearningHistory(int userID) throws SQLException {
+    List<UserChapterMastery> history = new ArrayList<>();
+    String sql = "SELECT ucm.*, c.ChapterName, c.ChapterNumber, b.BookName " +
+                 "FROM UserChapterMastery ucm " +
+                 "JOIN Chapters c ON ucm.ChapterID = c.ChapterID " +
+                 "JOIN Books b ON c.BookID = b.BookID " +
+                 "WHERE ucm.UserID = ? " +
+                 "ORDER BY ucm.LastUpdated DESC";
+    
+    try (Connection conn = getConnection();
+         PreparedStatement ps = conn.prepareStatement(sql)) {
+        
+        ps.setInt(1, userID);
+        ResultSet rs = ps.executeQuery();
+        
+        while (rs.next()) {
+            UserChapterMastery mastery = new UserChapterMastery();
+            mastery.setMasteryID(rs.getInt("MasteryID"));
+            mastery.setUserID(rs.getInt("UserID"));
+            mastery.setChapterID(rs.getInt("ChapterID"));
+            mastery.setTotalQuestions(rs.getInt("TotalQuestions"));
+            mastery.setCorrectAnswers(rs.getInt("CorrectAnswers"));
+            mastery.setMasteryScore(rs.getDouble("MasteryScore"));
+            mastery.setLastUpdated(rs.getTimestamp("LastUpdated"));
+            
+            history.add(mastery);
+        }
+        
+        logger.info("📊 Found " + history.size() + " chapters with progress for user " + userID);
+    }
+    
+    return history;
+}
+
+
+public Map<String, Object> getChapterHistory(int userID, int chapterID) throws SQLException {
+    Map<String, Object> result = new HashMap<>();
+
+    UserChapterMastery mastery = getMasteryScore(userID, chapterID);
+    result.put("mastery", mastery);
+
+    String sql = "SELECT uqp.*, qa.Question, qa.Difficulty " +
+                 "FROM UserQAPerformance uqp " +
+                 "JOIN QA qa ON uqp.QAID = qa.QAID " +
+                 "WHERE uqp.UserID = ? AND uqp.ChapterID = ? " +
+                 "ORDER BY uqp.AttemptedAt DESC";
+    
+    List<Map<String, Object>> attempts = new ArrayList<>();
+    
+    try (Connection conn = getConnection();
+         PreparedStatement ps = conn.prepareStatement(sql)) {
+        
+        ps.setInt(1, userID);
+        ps.setInt(2, chapterID);
+        
+        ResultSet rs = ps.executeQuery();
+        
+        while (rs.next()) {
+            Map<String, Object> attempt = new HashMap<>();
+            attempt.put("performanceID", rs.getInt("PerformanceID"));
+            attempt.put("qaID", rs.getInt("QAID"));
+            attempt.put("question", rs.getString("Question"));
+            attempt.put("difficulty", rs.getString("Difficulty"));
+            attempt.put("isCorrect", rs.getBoolean("IsCorrect"));
+            attempt.put("timeSpent", rs.getInt("TimeSpent"));
+            attempt.put("understandingLevel", rs.getString("UnderstandingLevel"));
+            attempt.put("aiScore", rs.getDouble("AIScore"));
+            attempt.put("aiFeedback", rs.getString("AIFeedback"));
+            attempt.put("attemptedAt", rs.getTimestamp("AttemptedAt"));
+            
+            attempts.add(attempt);
+        }
+    }
+    
+    result.put("attempts", attempts);
+    result.put("totalAttempts", attempts.size());
+    
+    logger.info("📚 Found " + attempts.size() + " attempts for user " + userID + " chapter " + chapterID);
+    
+    return result;
+}
+    
 }

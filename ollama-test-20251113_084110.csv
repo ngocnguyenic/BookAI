@@ -1,0 +1,4 @@
+﻿Test Name,Status,Execution Time (ms),Notes,Error,Timestamp
+Generate Summary,PASSED,6552,"Length: 470 chars","",2025-11-13T08:41:01.7840403
+Generate MCQ,PASSED,6411,"Generated 3 MCQs","",2025-11-13T08:41:08.2106024
+Evaluate Answer,PASSED,2652,"Score: 70.0, Level: good","",2025-11-13T08:41:10.8688685

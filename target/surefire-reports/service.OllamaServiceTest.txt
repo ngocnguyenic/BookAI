@@ -1,0 +1,13 @@
+-------------------------------------------------------------------------------
+Test set: service.OllamaServiceTest
+-------------------------------------------------------------------------------
+Tests run: 3, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 93.78 s <<< FAILURE! -- in service.OllamaServiceTest
+service.OllamaServiceTest.testGenerateMCQ -- Time elapsed: 80.43 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: MCQ generation failed after 2 attempts: Invalid JSON from Ollama: Expected a ',' or ']' at 1401 [character 5 line 17]. Try regenerating or check Ollama output quality.
+	at org.junit.jupiter.api.AssertionUtils.fail(AssertionUtils.java:38)
+	at org.junit.jupiter.api.Assertions.fail(Assertions.java:138)
+	at service.OllamaServiceTest.testGenerateMCQ(OllamaServiceTest.java:146)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+

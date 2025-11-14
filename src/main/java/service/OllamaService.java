@@ -182,33 +182,54 @@ public class OllamaService {
     
     
     public List<QADao.QAItem> generateMCQ(String summary, int numQuestions) throws Exception {
-        logger.info("Generating " + numQuestions + " MCQs...");
-        
-        String prompt = buildMCQPrompt(summary, numQuestions);
-        
-        JSONObject request = new JSONObject();
-        request.put("model", "llama3.2");
-        request.put("prompt", prompt);
-        request.put("stream", false);
-        request.put("temperature", 0.7);
-        
-        long startTime = System.currentTimeMillis();
-        String jsonResponse = sendOllamaRequest(request.toString());
-        
-        JSONObject responseObj = new JSONObject(jsonResponse);
-        String generatedText = responseObj.getString("response");
-        
-        long duration = System.currentTimeMillis() - startTime;
-        logger.info(String.format("MCQ response received in %.1fs", duration / 1000.0));
-        
-        String jsonStr = extractJSON(generatedText);
-        List<QADao.QAItem> mcqs = parseMCQsFromJSON(jsonStr);
-        
-        logger.info("Successfully parsed " + mcqs.size() + " MCQs");
-        logDifficultyDistribution(mcqs);
-        
-        return mcqs;
+    int maxRetries = 2;
+    Exception lastError = null;
+    
+    for (int attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            logger.info("Attempt " + attempt + "/" + maxRetries + " - Generating " + numQuestions + " MCQs...");
+            
+            String prompt = buildMCQPrompt(summary, numQuestions);
+            
+            JSONObject request = new JSONObject();
+            request.put("model", "llama3.2");
+            request.put("prompt", prompt);
+            request.put("stream", false);
+            request.put("temperature", 0.7);
+            
+            long startTime = System.currentTimeMillis();
+            String jsonResponse = sendOllamaRequest(request.toString());
+            
+            JSONObject responseObj = new JSONObject(jsonResponse);
+            String generatedText = responseObj.getString("response");
+            
+            long duration = System.currentTimeMillis() - startTime;
+            logger.info("MCQ response received in " + String.format("%.1fs", duration / 1000.0));
+            
+            String jsonStr = extractJSON(generatedText);
+            List<QADao.QAItem> mcqs = parseMCQsFromJSON(jsonStr);
+            
+            logger.info("Successfully generated " + mcqs.size() + " MCQs on attempt " + attempt);
+            return mcqs;
+            
+        } catch (Exception e) {
+            lastError = e;
+            logger.warning("Attempt " + attempt + " failed: " + e.getMessage());
+            
+            if (attempt < maxRetries) {
+                logger.info("Retrying in 3 seconds...");
+                try {
+                    Thread.sleep(3000);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        }
     }
+    
+    logger.severe("Failed after " + maxRetries + " attempts");
+    throw new Exception("MCQ generation failed after " + maxRetries + " attempts: " + lastError.getMessage());
+}
     
     private String buildMCQPrompt(String summary, int numQuestions) {
         return "BỐI CẢNH: Bạn là giảng viên đại học, tạo câu hỏi trắc nghiệm cho sinh viên.\n\n" +
@@ -250,48 +271,96 @@ public class OllamaService {
                "- Đảm bảo JSON hợp lệ";
     }
     
-    private List<QADao.QAItem> parseMCQsFromJSON(String jsonStr) throws Exception {
+   private List<QADao.QAItem> parseMCQsFromJSON(String jsonStr) throws Exception {
     List<QADao.QAItem> result = new ArrayList<>();
+    String originalJson = jsonStr;
     
     try {
+        jsonStr = jsonStr.trim()
+                         .replaceAll("```json\\s*", "")
+                         .replaceAll("```\\s*", "")
+                         .trim();
+        
+        int start = jsonStr.indexOf('{');
+        int lastClose = jsonStr.lastIndexOf('}');
+        
+        if (start < 0 || lastClose < 0 || lastClose <= start) {
+            throw new Exception("No valid JSON object found");
+        }
+        
+        jsonStr = jsonStr.substring(start, lastClose + 1);
+        jsonStr = jsonStr.replaceAll(",\\s*([}\\]])", "$1");
+        
         JSONObject obj = new JSONObject(jsonStr);
+        
+        if (!obj.has("qas")) {
+            throw new Exception("Missing 'qas' field");
+        }
+        
         JSONArray qasArray = obj.getJSONArray("qas");
         
+        if (qasArray.length() == 0) {
+            throw new Exception("Empty 'qas' array");
+        }
+        
+        int successCount = 0;
+        
         for (int i = 0; i < qasArray.length(); i++) {
-            JSONObject qa = qasArray.getJSONObject(i);
-            
-            // Kiểm tra xem có đủ field không
-            if (!qa.has("question")) {
-                logger.warning("Question " + (i+1) + " missing 'question' field, skipping");
-                continue;
+            try {
+                JSONObject qa = qasArray.getJSONObject(i);
+                
+                String question = qa.optString("question", "");
+                String answer = qa.optString("answer", "");
+                String difficulty = qa.optString("difficulty", "medium").toLowerCase();
+                
+                if (question.isEmpty()) {
+                    logger.warning("Question " + (i+1) + ": Empty question, skipping");
+                    continue;
+                }
+                
+                if (answer.isEmpty()) {
+                    logger.warning("Question " + (i+1) + ": Empty answer, skipping");
+                    continue;
+                }
+                
+                if (!question.contains("A.") || !question.contains("B.") ||
+                    !question.contains("C.") || !question.contains("D.")) {
+                    logger.warning("Question " + (i+1) + ": Missing options, skipping");
+                    continue;
+                }
+                
+                if (!difficulty.equals("easy") && !difficulty.equals("medium") && !difficulty.equals("hard")) {
+                    logger.warning("Question " + (i+1) + ": Invalid difficulty '" + difficulty + "', using 'medium'");
+                    difficulty = "medium";
+                }
+                
+                result.add(new QADao.QAItem(question, answer, difficulty, "mcq"));
+                successCount++;
+                logger.fine("Successfully parsed question " + (i+1));
+                
+            } catch (Exception ex) {
+                logger.warning("Question " + (i+1) + " parsing error: " + ex.getMessage() + " - Skipping");
             }
-            
-            if (!qa.has("answer")) {
-                logger.warning("Question " + (i+1) + " missing 'answer' field, skipping");
-                continue;
-            }
-            
-            String question = qa.getString("question");
-            String answer = qa.getString("answer");
-            String difficulty = qa.optString("difficulty", "medium").toLowerCase();
-            
-            // Validate difficulty
-            if (!difficulty.equals("easy") && !difficulty.equals("medium") && !difficulty.equals("hard")) {
-                logger.warning("Invalid difficulty '" + difficulty + "', defaulting to medium");
-                difficulty = "medium";
-            }
-            
-            result.add(new QADao.QAItem(question, answer, difficulty, "mcq"));
         }
         
         if (result.isEmpty()) {
-            throw new Exception("No valid MCQs parsed from response");
+            throw new Exception("No valid questions could be parsed from " + qasArray.length() + " items");
         }
         
+        logger.info("Successfully parsed " + successCount + "/" + qasArray.length() + " questions");
+        logDifficultyDistribution(result);
+        
+    } catch (org.json.JSONException e) {
+        logger.severe("JSON Parse Error: " + e.getMessage());
+        logger.severe("Problematic JSON (first 500 chars):");
+        logger.severe(originalJson.substring(0, Math.min(500, originalJson.length())));
+        
+        throw new Exception("Invalid JSON from Ollama: " + e.getMessage() + 
+            ". Try regenerating or check Ollama output quality.");
+            
     } catch (Exception e) {
-        logger.log(Level.SEVERE, "Failed to parse MCQs from JSON: " + e.getMessage());
-        logger.severe("JSON string: " + jsonStr);
-        throw new Exception("Invalid JSON response from Ollama: " + e.getMessage());
+        logger.severe("Parse failed: " + e.getMessage());
+        throw new Exception("MCQ parsing failed: " + e.getMessage());
     }
     
     return result;
@@ -510,30 +579,31 @@ public String extractKeyConcepts(String chapterTitle, String chapterContent)
                "CHỈ TRẢ VỀ JSON, KHÔNG CÓ TEXT KHÁC.";
     }
     
-    private QATaggingResult parseTaggingResult(String jsonText) throws Exception {
-        String cleanJson = extractJSON(jsonText);
-        JSONObject obj = new JSONObject(cleanJson);
-        
-        QATaggingResult result = new QATaggingResult();
-        result.bloomLevel = obj.getString("bloom_level");
-        result.questionType = obj.getString("question_type");
-        result.confidence = obj.getDouble("confidence");
+   private QATaggingResult parseTaggingResult(String jsonText) throws Exception {
+    String cleanJson = extractJSON(jsonText);
+    JSONObject obj = new JSONObject(cleanJson);
+    
+    QATaggingResult result = new QATaggingResult();
+    result.bloomLevel = obj.getString("bloom_level");
+    result.questionType = obj.getString("question_type");
+    
+    result.confidence = obj.optDouble("confidence", 0.8);
 
-        JSONArray topicsArr = obj.getJSONArray("topics");
-        result.topics = new ArrayList<>();
-        for (int i = 0; i < topicsArr.length(); i++) {
-            result.topics.add(topicsArr.getString(i));
-        }
-
-        JSONArray conceptsArr = obj.getJSONArray("concepts");
-        result.concepts = new ArrayList<>();
-        for (int i = 0; i < conceptsArr.length(); i++) {
-            result.concepts.add(conceptsArr.getString(i));
-        }
-        
-        logger.info("Auto-tagging completed: " + result);
-        return result;
+    JSONArray topicsArr = obj.getJSONArray("topics");
+    result.topics = new ArrayList<>();
+    for (int i = 0; i < topicsArr.length(); i++) {
+        result.topics.add(topicsArr.getString(i));
     }
+
+    JSONArray conceptsArr = obj.getJSONArray("concepts");
+    result.concepts = new ArrayList<>();
+    for (int i = 0; i < conceptsArr.length(); i++) {
+        result.concepts.add(conceptsArr.getString(i));
+    }
+    
+    logger.info("Auto-tagging completed: " + result);
+    return result;
+}
     private String extractJSON(String text) {
         text = text.trim();
         

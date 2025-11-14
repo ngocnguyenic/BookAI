@@ -294,7 +294,7 @@ public class ChapterAIDetector {
         return chapters;
     }
     
-    private List<Chapter> aiSemanticDetection(String fullText) throws IOException {
+    private List<Chapter> aiSemanticDetection(String fullText) throws IOException, InterruptedException {
         // ... code cũ giữ nguyên ...
         String textToAnalyze = fullText.length() > MAX_TEXT_LENGTH 
             ? fullText.substring(0, MAX_TEXT_LENGTH) 
